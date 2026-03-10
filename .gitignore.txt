@@ -1,0 +1,20 @@
+# --- Ignorar archivos de Flutter/Android ---
+**/build/
+**/.dart_tool/
+**/.gradle/
+**/local.properties
+**/GeneratedPluginRegistrant.java
+
+# --- Ignorar archivos de Python (Backend) ---
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+
+# --- Ignorar archivos de editores y sistema ---
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
