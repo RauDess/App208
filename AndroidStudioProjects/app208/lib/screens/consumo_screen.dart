@@ -645,6 +645,91 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
     );
   }
 
+  Future<void> _confirmarEliminarReporte(Map<String, dynamic> reporte) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange, size: 28),
+            SizedBox(width: 12),
+            Text('Confirmar eliminación'),
+          ],
+        ),
+        content: Text(
+          '¿Está seguro de eliminar el reporte del período "${reporte['periodo']}"?\n\n'
+              'Esta acción no se puede deshacer.',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      await _eliminarReporte(reporte['id_reporte']);
+    }
+  }
+
+  Future<void> _eliminarReporte(int idReporte) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final response = await http.delete(
+        Uri.parse('${AppConstants.baseUrl}/reportes/eliminar/$idReporte'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✓ Reporte eliminado correctamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Recargar lista de reportes
+          await _cargarReportes();
+        }
+      } else {
+        final error = jsonDecode(response.body)['message'];
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $error'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildReporteInfo({
     required IconData icono,
     required String valor,
