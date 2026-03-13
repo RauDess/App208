@@ -54,13 +54,14 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
   List<Map<String, dynamic>> _clasificacionDias = [];
   Map<String, dynamic> _clusteringData = {};
   bool _isLoadingMineria = false;
-
   bool _isLoading = true;
+  List<dynamic> _reportes = [];
 
   @override
   void initState() {
     super.initState();
     _cargarTodosLosDatos();
+    _cargarReportesInicial();
 
       // Timer cada 10 segundos
       _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
@@ -113,6 +114,19 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
     ]);
 
     setState(() => _isLoading = false);
+  }
+
+  Future<void> _cargarReportesInicial() async {
+    try {
+      final reportes = await _obtenerReportes();
+      if (mounted) {
+        setState(() {
+          _reportes = reportes;
+        });
+      }
+    } catch (e) {
+      print('Error cargando reportes: $e');
+    }
   }
 
   Future<void> _cargarConsumoActual() async {
@@ -331,79 +345,42 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
 
               // Lista de reportes
               Expanded(
-                child: FutureBuilder<List<dynamic>>(
-                  future: _obtenerReportes(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(
-                          color: Color(AppConstants.primaryColor),
+                child: _reportes.isEmpty
+                    ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.inbox,
+                        size: 80,
+                        color: Colors.grey[300],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No hay reportes generados',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
                         ),
-                      );
-                    }
-
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              size: 60,
-                              color: Colors.red[300],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Error al cargar reportes',
-                              style: TextStyle(color: Colors.grey[600]),
-                            ),
-                          ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Genera tu primer reporte',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[500],
                         ),
-                      );
-                    }
-
-                    final reportes = snapshot.data ?? [];
-
-                    if (reportes.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.inbox,
-                              size: 80,
-                              color: Colors.grey[300],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No hay reportes generados',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Genera tu primer reporte',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[500],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      controller: scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: reportes.length,
-                      itemBuilder: (context, index) {
-                        final reporte = reportes[index];
-                        return _buildReporteCard(reporte);
-                      },
-                    );
+                      ),
+                    ],
+                  ),
+                )
+                    : ListView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _reportes.length,
+                  itemBuilder: (context, index) {
+                    final reporte = _reportes[index];
+                    return _buildReporteCard(reporte);
                   },
                 ),
               ),
@@ -466,7 +443,13 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
+        // RECARGAR LISTA ANTES DE CERRAR
+        final reportesActualizados = await _obtenerReportes();
         if (mounted) {
+          setState(() {
+            _reportes = reportesActualizados;
+          });
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(data['message']),
@@ -522,7 +505,6 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
         onTap: () {
-          // Aquí irá la función para descargar PDF (lo haremos después)
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Funcionalidad de PDF próximamente'),
@@ -535,15 +517,13 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Título y fecha
+              // Título y fecha CON BOTÓN ELIMINAR
               Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(
-                        AppConstants.primaryColor,
-                      ).withOpacity(0.1),
+                      color: const Color(AppConstants.primaryColor).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
@@ -575,6 +555,13 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
                       ],
                     ),
                   ),
+                  // ← BOTÓN ELIMINAR AGREGADO AQUÍ ↓
+                  if (widget.usuario.rol == 'coordinador')
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      tooltip: 'Eliminar reporte',
+                      onPressed: () => _confirmarEliminarReporte(reporte),
+                    ),
                 ],
               ),
 
@@ -592,22 +579,19 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
                   children: [
                     _buildReporteInfo(
                       icono: Icons.flash_on,
-                      valor:
-                          '${double.tryParse(reporte['total_consumo_kWh'].toString())?.toStringAsFixed(1) ?? '0.0'} kWh',
+                      valor: '${double.tryParse(reporte['total_consumo_kWh'].toString())?.toStringAsFixed(1) ?? '0.0'} kWh',
                       etiqueta: 'Consumo',
                     ),
                     Container(width: 1, height: 40, color: Colors.grey[300]),
                     _buildReporteInfo(
                       icono: Icons.access_time,
-                      valor:
-                          '${double.tryParse(reporte['total_horas_uso'].toString())?.toStringAsFixed(1) ?? '0.0'} h',
+                      valor: '${double.tryParse(reporte['total_horas_uso'].toString())?.toStringAsFixed(1) ?? '0.0'} h',
                       etiqueta: 'Horas',
                     ),
                     Container(width: 1, height: 40, color: Colors.grey[300]),
                     _buildReporteInfo(
                       icono: Icons.trending_up,
-                      valor:
-                          '${double.tryParse(reporte['promedio_diario_kWh'].toString())?.toStringAsFixed(1) ?? '0.0'} kWh',
+                      valor: '${double.tryParse(reporte['promedio_diario_kWh'].toString())?.toStringAsFixed(1) ?? '0.0'} kWh',
                       etiqueta: 'Promedio',
                     ),
                   ],
@@ -645,26 +629,65 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
     );
   }
 
+  // FUNCIÓN: CONFIRMAR ELIMINACIÓN DE REPORTE
   Future<void> _confirmarEliminarReporte(Map<String, dynamic> reporte) async {
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.warning, color: Colors.orange, size: 28),
-            SizedBox(width: 12),
-            Text('Confirmar eliminación'),
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            const SizedBox(width: 12),
+            const Text('Confirmar eliminación'),
           ],
         ),
-        content: Text(
-          '¿Está seguro de eliminar el reporte del período "${reporte['periodo']}"?\n\n'
-              'Esta acción no se puede deshacer.',
-          style: TextStyle(fontSize: 14),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¿Está seguro de eliminar este reporte?',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Reporte: ${reporte['descripcion'] ?? 'Reporte semanal'}',
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+            ),
+            Text(
+              'Generado: ${reporte['fecha_generacion']}',
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.red[700], size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Esta acción no se puede deshacer',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.red[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancelar'),
+            child: const Text('Cancelar'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -672,7 +695,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text('Eliminar'),
+            child: const Text('Eliminar'),
           ),
         ],
       ),
@@ -683,10 +706,10 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
     }
   }
 
+// FUNCIÓN: ELIMINAR REPORTE
   Future<void> _eliminarReporte(int idReporte) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token') ?? '';
+      final token = await _getToken();
 
       final response = await http.delete(
         Uri.parse('${AppConstants.baseUrl}/reportes/eliminar/$idReporte'),
@@ -698,14 +721,21 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
 
       if (response.statusCode == 200) {
         if (mounted) {
+          // Recargar lista de reportes
+          final reportesActualizados = await _obtenerReportes();
+          setState(() {
+            _reportes = reportesActualizados;  // ← ACTUALIZAR LISTA
+          });
+
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
+            const SnackBar(
               content: Text('✓ Reporte eliminado correctamente'),
               backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
             ),
           );
-          // Recargar lista de reportes
-          await _cargarReportes();
+          Navigator.pop(context);  // Cierra el BottomSheet actual
+          _mostrarReportes();      // Reabre con lista actualizada
         }
       } else {
         final error = jsonDecode(response.body)['message'];
@@ -714,6 +744,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
             SnackBar(
               content: Text('Error: $error'),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
             ),
           );
         }
@@ -722,8 +753,9 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('Error al eliminar: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }

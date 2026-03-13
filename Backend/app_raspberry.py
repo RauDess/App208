@@ -3090,9 +3090,10 @@ def eliminar_reporte(current_user_id, id_reporte):
         
     except Exception as e:
         print(f"Error al eliminar reporte: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'message': f'Error: {str(e)}'}), 500
     
-
 ################################ TEMPORIZADOR ################################
 # ============================================
 # ENDPOINT: PROGRAMAR TEMPORIZADOR
