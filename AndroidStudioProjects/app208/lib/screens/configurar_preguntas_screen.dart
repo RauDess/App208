@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../utils/constants.dart';
+import 'package:app208/utils/notificaciones.dart';
 
 class ConfigurarPreguntasScreen extends StatefulWidget {
   final bool obligatorio;

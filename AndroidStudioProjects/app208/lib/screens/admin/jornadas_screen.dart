@@ -6,6 +6,7 @@ import 'dart:convert';
 import '../../models/usuario.dart';
 import '../../utils/constants.dart';
 import 'package:flutter/services.dart';
+import 'package:app208/utils/notificaciones.dart';
 
 class JornadasScreen extends StatefulWidget {
   final Usuario usuario;
@@ -206,36 +207,18 @@ class _JornadasScreenState extends State<JornadasScreen> {
       if (response.statusCode == 200) {
         await _cargarJornadas();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Jornada de $dia actualizada'),
-              backgroundColor: Colors.green,
-              duration: const Duration(milliseconds: 1500),
-            ),
-          );
+          Notificaciones.mostrarExito(context, 'Jornada de $dia actualizada');
         }
       } else {
         final error = jsonDecode(response.body)['message'];
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: $error'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 1),
-            ),
-          );
+          Notificaciones.mostrarError(context, 'Error: $error');
         }
       }
     } catch (e) {
       print('Error guardando jornada: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error de conexión: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 1),
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error de conexión: $e');
       }
     }
   }
@@ -355,42 +338,21 @@ class _JornadasScreenState extends State<JornadasScreen> {
 
               // VALIDACIONES FRONTEND
               if (nuevoPeriodo.isEmpty || fechaInicio.isEmpty || fechaFin.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Todos los campos son obligatorios'),
-                    backgroundColor: Colors.red,
-                    behavior: SnackBarBehavior.floating,
-                    margin: EdgeInsets.only(top: 80, left: 16, right: 16),
-                  ),
-                );
+                Notificaciones.mostrarError(context, 'Todos los campos son obligatorios');
                 return;
               }
 
               // Validar formato período
               final validacionPeriodo = _validarPeriodo(nuevoPeriodo);
               if (validacionPeriodo != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(validacionPeriodo),
-                    backgroundColor: Colors.red,
-                    behavior: SnackBarBehavior.floating,
-                    margin: const EdgeInsets.only(top: 80, left: 16, right: 16),
-                  ),
-                );
+                Notificaciones.mostrarError(context, validacionPeriodo);
                 return;
               }
 
               // Validar formato fechas
               final validacionFechas = _validarFechas(fechaInicio, fechaFin, nuevoPeriodo);
               if (validacionFechas != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(validacionFechas),
-                    backgroundColor: Colors.red,
-                    behavior: SnackBarBehavior.floating,
-                    margin: const EdgeInsets.only(top: 80, left: 16, right: 16),
-                  ),
-                );
+                Notificaciones.mostrarError(context, validacionFechas);
                 return;
               }
 
@@ -491,14 +453,7 @@ class _JornadasScreenState extends State<JornadasScreen> {
 
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error de conexión: $e'),
-                      backgroundColor: Colors.red,
-                      behavior: SnackBarBehavior.floating,
-                      margin: const EdgeInsets.only(top: 80, left: 16, right: 16),
-                    ),
-                  );
+                  Notificaciones.mostrarError(context, 'Error de conexión: $e');
                 }
               }
             },

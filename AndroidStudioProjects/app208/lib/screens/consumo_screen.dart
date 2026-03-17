@@ -12,6 +12,7 @@ import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/usuario.dart';
 import '../utils/constants.dart';
+import 'package:app208/utils/notificaciones.dart';
 
 class ConsumoScreen extends StatefulWidget {
   final Usuario usuario;

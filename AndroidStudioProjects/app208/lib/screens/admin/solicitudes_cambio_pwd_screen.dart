@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../../models/usuario.dart';
 import '../../utils/constants.dart';
+import 'package:app208/utils/notificaciones.dart';
 
 class SolicitudesCambioPwdScreen extends StatefulWidget {
   final Usuario usuario;
@@ -31,7 +32,6 @@ class _SolicitudesCambioPwdScreenState extends State<SolicitudesCambioPwdScreen>
 
   Future<void> _cargarSolicitudes() async {
     setState(() => _isLoading = true);
-
     try {
       final token = await _getToken();
       final response = await http.get(
@@ -61,7 +61,6 @@ class _SolicitudesCambioPwdScreenState extends State<SolicitudesCambioPwdScreen>
   Future<void> _aprobarSolicitud(int idUsuario, String nombreUsuario) async {
     try {
       final token = await _getToken();
-      print('✅ Aprobando solicitud para usuario $idUsuario');
 
       final response = await http.put(
         Uri.parse('${AppConstants.baseUrl}/usuarios/$idUsuario/aprobar-cambio-pwd'),
@@ -72,17 +71,9 @@ class _SolicitudesCambioPwdScreenState extends State<SolicitudesCambioPwdScreen>
         body: jsonEncode({'accion': 'aprobar'}),
       );
 
-      print('📡 Respuesta del servidor: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✅ Cambio de contraseña aprobado para $nombreUsuario'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          Notificaciones.mostrarExito(context, 'Cambio de contraseña aprobado para $nombreUsuario');
         }
 
         // Recargar lista
@@ -95,7 +86,6 @@ class _SolicitudesCambioPwdScreenState extends State<SolicitudesCambioPwdScreen>
         } catch (e) {
           errorMsg = 'Error ${response.statusCode}';
         }
-
         print('❌ Error: $errorMsg');
 
         if (mounted) {

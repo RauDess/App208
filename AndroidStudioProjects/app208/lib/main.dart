@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/splash_screen.dart';
 import 'utils/constants.dart';
+import 'package:app208/utils/notificaciones.dart';
 
 // Clave global para navegación
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();

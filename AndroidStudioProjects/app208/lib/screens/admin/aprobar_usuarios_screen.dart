@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../../models/usuario.dart';
 import '../../utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app208/utils/notificaciones.dart';
 
 class AprobarUsuariosScreen extends StatefulWidget {
   final Usuario usuario;
@@ -66,9 +67,10 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
       _cargarUsuariosInactivos(),
       _cargarUsuariosRechazados(),
     ]);
-
     setState(() => _isLoading = false);
-  }Future<void> _cargarUsuariosPendientes() async {
+  }
+
+  Future<void> _cargarUsuariosPendientes() async {
     try {
       final token = await _getToken();
       final response = await http.get(
@@ -89,8 +91,6 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
       print('Error cargando pendientes: $e');
     }
   }
-
-
 
   Future<void> _cargarUsuariosActivos() async {
     try {
@@ -174,23 +174,12 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✓ $nombre aprobado correctamente'),
-              backgroundColor: colorExito,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          Notificaciones.mostrarExito(context, '✓ $nombre aprobado correctamente');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: colorError,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
   }
@@ -211,23 +200,12 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✗ Solicitud de $nombre rechazada'),
-              backgroundColor: colorError,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          Notificaciones.mostrarAdvertencia(context, '✗ Solicitud de $nombre rechazada');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: colorError,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
   }
@@ -248,23 +226,12 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✓ $nombre aprobado (rechazo revertido)'),
-              backgroundColor: colorExito,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          Notificaciones.mostrarExito(context, '✓ $nombre aprobado (rechazo revertido)');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: colorError,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
   }
@@ -285,23 +252,12 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('⊗ $nombre eliminado permanentemente'),
-              backgroundColor: colorEliminado,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          Notificaciones.mostrarError(context, '⊗ $nombre eliminado permanentemente');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: colorError,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
   }
@@ -322,23 +278,12 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('⊘ $nombre desactivado'),
-              backgroundColor: colorAdvertencia,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          Notificaciones.mostrarAdvertencia(context, '⊘ $nombre desactivado');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: colorError,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
   }
@@ -359,23 +304,12 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✓ $nombre reactivado'),
-              backgroundColor: colorExito,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          Notificaciones.mostrarExito(context, '✓ $nombre reactivado');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: colorError,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
   }
@@ -406,7 +340,6 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
     );
 
     if (confirmar != true) return;
-
     final token = await _getToken();
 
     try {
@@ -423,23 +356,12 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✎ Rol de $nombreUsuario actualizado a $nombreNuevoRol'),
-              backgroundColor: colorInfo,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          Notificaciones.mostrarInfo(context, '✎ Rol de $nombreUsuario actualizado a $nombreNuevoRol');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: colorError,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
   }
@@ -468,7 +390,6 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
     );
 
     if (confirmar != true) return;
-
     final token = await _getToken();
 
     try {
@@ -496,12 +417,7 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: colorError,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
   }
@@ -530,7 +446,6 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
     );
 
     if (confirmar != true) return;
-
     final token = await _getToken();
 
     try {
@@ -558,12 +473,7 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: colorError,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
   }
