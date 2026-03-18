@@ -60,22 +60,12 @@ class _ConfigurarPreguntasScreenState extends State<ConfigurarPreguntasScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_pregunta1 == null || _pregunta2 == null || _pregunta3 == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Debes seleccionar las 3 preguntas'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      Notificaciones.mostrarError(context, 'Debes seleccionar las 3 preguntas');
       return;
     }
 
     if (_pregunta1 == _pregunta2 || _pregunta1 == _pregunta3 || _pregunta2 == _pregunta3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No puedes repetir preguntas'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      Notificaciones.mostrarError(context, 'No puedes repetir preguntas');
       return;
     }
 
@@ -161,23 +151,13 @@ class _ConfigurarPreguntasScreenState extends State<ConfigurarPreguntasScreen> {
       } else {
         final error = jsonDecode(response.body)['message'];
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(error),
-              backgroundColor: Colors.red,
-            ),
-          );
+          Notificaciones.mostrarError(context, error);
         }
       }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error de conexión: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error de conexión: $e');
       }
     }
   }
@@ -188,12 +168,7 @@ class _ConfigurarPreguntasScreenState extends State<ConfigurarPreguntasScreen> {
         onWillPop: () async {
           // Si es obligatorio, NO permitir regresar
           if (widget.obligatorio) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Debes configurar tus preguntas para continuar'),
-                backgroundColor: Colors.orange,
-              ),
-            );
+            Notificaciones.mostrarAdvertencia(context, 'Debes configurar tus preguntas para continuar');
             return false; // No permite regresar
           }
           return true; // Permite regresar si no es obligatorio

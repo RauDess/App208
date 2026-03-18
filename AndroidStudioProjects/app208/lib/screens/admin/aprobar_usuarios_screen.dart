@@ -406,13 +406,7 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['message']),
-              backgroundColor: colorEliminado,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          Notificaciones.mostrarError(context, data['message']);
         }
       }
     } catch (e) {
@@ -462,13 +456,7 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['message']),
-              backgroundColor: colorEliminado,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          Notificaciones.mostrarError(context, data['message']);
         }
       }
     } catch (e) {

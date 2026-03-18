@@ -91,24 +91,13 @@ class _CambiarContrasenaScreenState extends State<CambiarContrasenaScreen> {
       } else {
         final error = jsonDecode(response.body)['message'];
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(error),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+          Notificaciones.mostrarError(context, error);
         }
       }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error de conexión: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error de conexión: $e');
       }
     }
   }

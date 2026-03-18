@@ -113,7 +113,6 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
       _cargarClasificacion(),
       _cargarClustering(),
     ]);
-
     setState(() => _isLoading = false);
   }
 
@@ -450,7 +449,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
           setState(() {
             _reportes = reportesActualizados;
           });
-
+          -
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(data['message']),
@@ -467,6 +466,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
         // Ya existe un reporte
         final data = jsonDecode(response.body);
         if (mounted) {
+          -
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(data['message']),
@@ -477,12 +477,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Error al generar reporte'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          Notificaciones.mostrarError(context, 'Error al generar reporte');
         }
       }
     } catch (e) {
@@ -490,9 +485,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
       Navigator.pop(context);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
   }
@@ -506,12 +499,6 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Funcionalidad de PDF próximamente'),
-              duration: Duration(seconds: 1),
-            ),
-          );
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -727,38 +714,19 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
           setState(() {
             _reportes = reportesActualizados;  // ← ACTUALIZAR LISTA
           });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✓ Reporte eliminado correctamente'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
-          );
+          Notificaciones.mostrarExito(context, '✓ Reporte eliminado correctamente');
           Navigator.pop(context);  // Cierra el BottomSheet actual
           _mostrarReportes();      // Reabre con lista actualizada
         }
       } else {
         final error = jsonDecode(response.body)['message'];
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: $error'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+          Notificaciones.mostrarError(context, 'Error: $error');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al eliminar: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error al eliminar: $e');
       }
     }
   }
@@ -815,12 +783,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
         await _guardarPDF(response.bodyBytes, idReporte);
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Error al descargar PDF'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          Notificaciones.mostrarError(context, 'Error al descargar PDF');
         }
       }
     } catch (e) {
@@ -828,9 +791,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
       Navigator.pop(context);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
   }
@@ -852,13 +813,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
         final filePath = await FlutterFileDialog.saveFile(params: params);
 
         if (filePath != null && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✓ PDF guardado correctamente'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
-          );
+          Notificaciones.mostrarExito(context, '✓ PDF guardado correctamente');
         }
       } else {
         // iOS
@@ -871,6 +826,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
         await file.writeAsBytes(bytes);
 
         if (mounted) {
+          -
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('PDF guardado: $filename'),
@@ -886,12 +842,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al guardar: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error al guardar: $e');
       }
     }
   }
@@ -959,14 +910,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
         final data = jsonDecode(response.body);
 
         if (data['advertencia'] == true && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['mensaje']),
-              backgroundColor: Colors.orange[700],
-              duration: const Duration(seconds: 5),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          Notificaciones.mostrarAdvertencia(context, 'mensaje');
         }
       }
     } catch (e) {

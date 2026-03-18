@@ -85,29 +85,17 @@ class _SolicitudesCambioPwdScreenState extends State<SolicitudesCambioPwdScreen>
           errorMsg = errorData['message'] ?? errorMsg;
         } catch (e) {
           errorMsg = 'Error ${response.statusCode}';
-        }
-        print('❌ Error: $errorMsg');
+          print('❌ Error: $errorMsg');
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMsg),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+          if (mounted) {
+            Notificaciones.mostrarError(context, errorMsg);
+          }
         }
       }
     } catch (e) {
       print('❌ Error de conexión: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error de conexión: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error de conexión: $e');
       }
     }
   }
