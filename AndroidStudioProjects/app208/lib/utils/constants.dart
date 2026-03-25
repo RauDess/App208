@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String baseUrl = 'http://192.168.101.7:3000/api';   //URL para hacer las peticiones en Raspberry en la U
+  static const String baseUrl = 'http://192.168.101.8:3000/api';   //URL para hacer las peticiones en Raspberry en la U
 
   // Endpoints
   static const String editarRolEndpoint = '$baseUrl/usuarios';

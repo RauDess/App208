@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
+import 'package:app208/utils/notificaciones.dart';
 
 class EditarDatosScreen extends StatefulWidget {
   const EditarDatosScreen({Key? key}) : super(key: key);
@@ -111,27 +112,18 @@ class _EditarDatosScreenState extends State<EditarDatosScreen> {
         /// NO actualizar SharedPreferences - los datos vienen del backend
         if (mounted) {
           Navigator.pop(context, true);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✓ Datos actualizados correctamente'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          Notificaciones.mostrarExito(context, '✓ Datos actualizados correctamente');
         }
       } else {
         final error = jsonDecode(response.body)['message'];
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error), backgroundColor: Colors.red),
-          );
+          Notificaciones.mostrarError(context, error);
         }
       }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
   }

@@ -15,6 +15,8 @@ import 'package:flutter/cupertino.dart';
 import 'configurar_preguntas_screen.dart';
 import 'cambiar_contrasena_screen.dart';
 import 'editar_datos_screen.dart';
+import 'package:app208/utils/notificaciones.dart';
+
 
 class ControlLucesScreen extends StatefulWidget {
   final Usuario usuario;
@@ -143,13 +145,9 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
         // Solo mostrar si realmente cambió algo (no si ya estaba en ese estado)
         if (nuevoEstado != estadoAnterior) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(nuevoEstado ? 'Grupo 1 encendido' : 'Grupo 1 apagado'),
-                backgroundColor: nuevoEstado ? Colors.green[600] : Colors.grey[700],
-                duration: const Duration(milliseconds: 1500),
-              ),
-            );
+            nuevoEstado
+                ? Notificaciones.mostrarExito(context, 'Grupo 1 encendido')
+                : Notificaciones.mostrarInfo(context, 'Grupo 1 apagado');
           }
         }
       } else {
@@ -157,14 +155,7 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
         setState(() => _grupo1Encendido = estadoAnterior);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Error al cambiar estado del Grupo 1'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 1), // ← OPTIMIZADO: 1 segundo para errores
-            ),
-          );
+          Notificaciones.mostrarError(context, 'Error al cambiar estado del Grupo 1');
         }
       }
     } catch (e) {
@@ -175,14 +166,7 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 1), // ← OPTIMIZADO
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
     _reiniciarTimer();
@@ -223,27 +207,16 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
         // Solo mostrar si realmente cambió algo (no si ya estaba en ese estado)
         if (nuevoEstado != estadoAnterior) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(nuevoEstado ? 'Grupo 2 encendido' : 'Grupo 2 apagado'),
-                backgroundColor: nuevoEstado ? Colors.green[600] : Colors.grey[700],
-                duration: const Duration(milliseconds: 1500),
-              ),
-            );
+            nuevoEstado
+                ? Notificaciones.mostrarExito(context, 'Grupo 2 encendido')
+                : Notificaciones.mostrarInfo(context, 'Grupo 2 apagado');
           }
         }
       } else {
         // Revertir si falló
         setState(() => _grupo2Encendido = estadoAnterior);
         if (mounted) {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Error al cambiar estado del Grupo 2'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 1), // ← OPTIMIZADO
-            ),
-          );
+          Notificaciones.mostrarError(context, 'Error al cambiar estado del Grupo 2');
         }
       }
     } catch (e) {
@@ -253,14 +226,7 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
         _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 1), // ← OPTIMIZADO
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
     _reiniciarTimer();
@@ -299,15 +265,7 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
           });
         }
         if (mounted) {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['message']),
-              backgroundColor: Colors.grey[700],
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(milliseconds: 1000), // ← OPTIMIZADO: 1 segundo
-            ),
-          );
+          Notificaciones.mostrarInfo(context, data['message']);
         }
       } else {
         // Revertir si falló
@@ -316,14 +274,7 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
           _grupo2Encendido = estadoAnteriorG2;
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Error al apagar las luces'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 1), // ← OPTIMIZADO
-            ),
-          );
+          Notificaciones.mostrarError(context, 'Error al apagar las luces');
         }
       }
     } catch (e) {
@@ -334,14 +285,7 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
         _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 1), // ← OPTIMIZADO
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
     _reiniciarTimer();
@@ -464,12 +408,7 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
                     Navigator.pop(context);
 
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Te recordaremos más tarde'),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
+                      Notificaciones.mostrarAdvertencia(context, 'Te recordaremos más tarde');
                     }
                   } catch (e) {
                     print('Error posponiendo: $e');
@@ -492,12 +431,7 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
 
                 // Si configuró exitosamente
                 if (configurado == true && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Preguntas configuradas correctamente'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
+                  Notificaciones.mostrarExito(context, 'Preguntas configuradas correctamente');
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -893,14 +827,7 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
             : 'Error al programar temporizador';
 
         if (mounted) {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMsg),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          Notificaciones.mostrarError(context, errorMsg);
         }
         return; // SALIR - NO ENCENDER LUCES
       }
@@ -941,27 +868,13 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
 
         if (!todoOk) {
           if (mounted) {
-            ScaffoldMessenger.of(context).clearSnackBars();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Error al encender luces'),
-                backgroundColor: Colors.red,
-                duration: Duration(seconds: 1),
-              ),
-            );
+            Notificaciones.mostrarError(context, 'Error al encender luces');
           }
           return;
         }
 
         if (mounted) {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✓ Luces encendidas'),
-              backgroundColor: Colors.green,
-              duration: Duration(milliseconds: 800),
-            ),
-          );
+          Notificaciones.mostrarExito(context, 'Luces encendidas');
         }
       }
 
@@ -972,29 +885,14 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Apagado programado: $horaFormateada'),
-            backgroundColor: Colors.blue[700],
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(milliseconds: 1500),
-          ),
-        );
+        Notificaciones.mostrarExito(context, 'Apagado programado: $horaFormateada');
       }
 
     } catch (e) {
       setState(() => _isLoading = false);
       print('Error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
   }
@@ -1035,15 +933,7 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
 
       if (results.every((r) => r.statusCode == 200)) {
         if (mounted) {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Temporizador cancelado - Luces apagadas'),
-              backgroundColor: Colors.orange,
-              behavior: SnackBarBehavior.floating,
-              duration: Duration(milliseconds: 1000), // ← OPTIMIZADO: 1 segundo
-            ),
-          );
+          Notificaciones.mostrarInfo(context, 'Temporizador cancelado - Luces apagadas');
         }
       } else {
         // Revertir si falló
@@ -1054,14 +944,7 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
           _temporizadorHora = horaAnterior;
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Error al cancelar'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 1), // ← OPTIMIZADO
-            ),
-          );
+          Notificaciones.mostrarError(context, 'Error al cancelar');
         }
       }
     } catch (e) {
@@ -1075,14 +958,7 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
       });
       print('Error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 1), // ← OPTIMIZADO
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error: $e');
       }
     }
   }

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/constants.dart';
 import 'configurar_preguntas_screen.dart';
+import 'package:app208/utils/notificaciones.dart';
 
 class RecuperarContrasenaScreen extends StatefulWidget {
   const RecuperarContrasenaScreen({super.key});
@@ -46,23 +47,14 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
   }
 
   Future<void> _validarCedula() async {
+
     if (_cedulaController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ingresa tu cédula'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      Notificaciones.mostrarError(context, 'Ingresa tu cédula');
       return;
     }
 
     if (_cedulaController.text.length != 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('La cédula debe tener 10 dígitos'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      Notificaciones.mostrarError(context, 'La cédula debe tener 10 dígitos');
       return;
     }
 
@@ -83,13 +75,7 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
           if (!dataCoord['tiene_preguntas']) {
             setState(() => _isLoading = false);
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('No tienes preguntas de seguridad configuradas. Contacta al administrador.'),
-                  backgroundColor: Colors.orange,
-                  duration: Duration(seconds: 4),
-                ),
-              );
+              Notificaciones.mostrarAdvertencia(context, 'No tienes preguntas de seguridad configuradas. Configure las preguntas');
             }
             return;
           }
@@ -133,24 +119,13 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
       } else {
         final error = jsonDecode(response.body)['message'];
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(error),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+          Notificaciones.mostrarError(context, error);
         }
       }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error de conexión: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error de conexión: $e');
       }
     }
   }
@@ -159,42 +134,22 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
     if (_respuesta1Controller.text.trim().isEmpty ||
         _respuesta2Controller.text.trim().isEmpty ||
         _respuesta3Controller.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Debes responder las 3 preguntas'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      Notificaciones.mostrarError(context, 'Debes responder las 3 preguntas');
       return;
     }
 
     if (_nuevaContrasenaController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ingresa tu nueva contraseña'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      Notificaciones.mostrarError(context, 'Ingresa tu nueva contraseña');
       return;
     }
 
     if (_nuevaContrasenaController.text.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('La contraseña debe tener al menos 8 caracteres'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      Notificaciones.mostrarError(context, 'La contraseña debe tener al menos 8 caracteres');;
       return;
     }
 
     if (_nuevaContrasenaController.text != _confirmarContrasenaController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Las contraseñas no coinciden'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      Notificaciones.mostrarError(context, 'Las contraseñas no coinciden');
       return;
     }
 
@@ -251,24 +206,13 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
       } else {
         final error = jsonDecode(response.body)['message'];
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(error),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+          Notificaciones.mostrarError(context, error);
         }
       }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error de conexión: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error de conexión: $e');
       }
     }
   }
@@ -343,24 +287,13 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
       } else {
         final error = jsonDecode(response.body)['message'];
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(error),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          Notificaciones.mostrarError(context, error);
         }
       }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error de conexión: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        Notificaciones.mostrarError(context, 'Error de conexión: $e');
       }
     }
   }

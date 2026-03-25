@@ -68,6 +68,13 @@ class _JornadasScreenState extends State<JornadasScreen> {
   bool _isLoading = true;
   String _periodoActual = '';
 
+  //Creacion de controles
+  final TextEditingController _periodoController = TextEditingController();
+  final TextEditingController _fechaInicioController = TextEditingController();
+  final TextEditingController _fechaFinController = TextEditingController();
+
+  String _errorMensaje = '';
+
   @override
   void initState() {
     super.initState();
@@ -96,13 +103,7 @@ class _JornadasScreenState extends State<JornadasScreen> {
         final data = jsonDecode(response.body);
 
         if (data['activo'] == false && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['mensaje']),
-              backgroundColor: Colors.orange[700],
-              duration: const Duration(seconds: 5),
-            ),
-          );
+          Notificaciones.mostrarAdvertencia(context, data['mensaje']);
         }
       }
     } catch (e) {
@@ -134,11 +135,15 @@ class _JornadasScreenState extends State<JornadasScreen> {
 
   Future<void> _cargarJornadas() async {
     setState(() => _isLoading = true);
-
     try {
       final token = await _getToken();
+      // Construir URL con período si existe
+      final url = _periodoActual.isNotEmpty
+          ? '${AppConstants.baseUrl}/jornadas/$_diaSeleccionado?periodo=$_periodoActual'
+          : '${AppConstants.baseUrl}/jornadas/$_diaSeleccionado';
+
       final response = await http.get(
-        Uri.parse('${AppConstants.baseUrl}/jornadas/$_diaSeleccionado'),
+        Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -224,246 +229,282 @@ class _JornadasScreenState extends State<JornadasScreen> {
   }
 
   Future<void> _cambiarPeriodo() async {
-    final periodoController = TextEditingController(text: '');
-    final fechaInicioController = TextEditingController(text: '');
-    final fechaFinController = TextEditingController(text: '');
-
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          'Configurar Período Académico',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Complete la información del nuevo período académico:',
-                style: TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-              const SizedBox(height: 20),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text(
+              'Configurar Período Académico',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Complete la información del nuevo período académico:',
+                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 20),
 
-              // CAMPO 1: Período
-              TextField(
-                controller: periodoController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
-                  LengthLimitingTextInputFormatter(10),
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'Período',
-                  hintText: 'YYYY-N',
-                  border: OutlineInputBorder(),
-                  helperText: 'Formato: YYYY-1 o YYYY-2',
-                  prefixIcon: Icon(Icons.calendar_today),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // CAMPO 2: Fecha inicio
-              TextField(
-                controller: fechaInicioController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
-                  LengthLimitingTextInputFormatter(10),
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'Fecha de inicio',
-                  hintText: 'YYYY-MM-DD',
-                  border: OutlineInputBorder(),
-                  helperText: 'Formato: YYYY-MM-DD',
-                  prefixIcon: Icon(Icons.event),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // CAMPO 3: Fecha fin
-              TextField(
-                controller: fechaFinController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
-                  LengthLimitingTextInputFormatter(10),
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'Fecha de fin',
-                  hintText: 'YYYY-MM-DD',
-                  border: OutlineInputBorder(),
-                  helperText: 'Formato: YYYY-MM-DD',
-                  prefixIcon: Icon(Icons.event_available),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // NOTA INFORMATIVA
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, size: 20, color: Colors.blue[700]),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'El período debe tener al menos 4 meses de duración',
-                        style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                  // MOSTRAR ERROR SI EXISTE
+                  if (_errorMensaje.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _errorMensaje,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.red.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+
+                  // CAMPO 1: Período
+                  TextField(
+                    controller: _periodoController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
+                      LengthLimitingTextInputFormatter(10),
+                    ],
+                    decoration: const InputDecoration(
+                      labelText: 'Período',
+                      hintText: 'YYYY-N',
+                      border: OutlineInputBorder(),
+                      helperText: 'Formato: YYYY-1 o YYYY-2',
+                      prefixIcon: Icon(Icons.calendar_today),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // CAMPO 2: Fecha inicio
+                  TextField(
+                    controller: _fechaInicioController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
+                      LengthLimitingTextInputFormatter(10),
+                    ],
+                    decoration: const InputDecoration(
+                      labelText: 'Fecha de inicio',
+                      hintText: 'YYYY-MM-DD',
+                      border: OutlineInputBorder(),
+                      helperText: 'Formato: YYYY-MM-DD',
+                      prefixIcon: Icon(Icons.event),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // CAMPO 3: Fecha fin
+                  TextField(
+                    controller: _fechaFinController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
+                      LengthLimitingTextInputFormatter(10),
+                    ],
+                    decoration: const InputDecoration(
+                      labelText: 'Fecha de fin',
+                      hintText: 'YYYY-MM-DD',
+                      border: OutlineInputBorder(),
+                      helperText: 'Formato: YYYY-MM-DD',
+                      prefixIcon: Icon(Icons.event_available),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // NOTA INFORMATIVA
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 20, color: Colors.blue[700]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'El período debe tener al menos 4 meses de duración',
+                            style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  setState(() => _errorMensaje = '');
+                  Navigator.pop(context);
+                },
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final nuevoPeriodo = _periodoController.text.trim();
+                  final fechaInicio = _fechaInicioController.text.trim();
+                  final fechaFin = _fechaFinController.text.trim();
+
+                  // VALIDACIÓN 1: Campos vacíos
+                  if (nuevoPeriodo.isEmpty || fechaInicio.isEmpty || fechaFin.isEmpty) {
+                    setDialogState(() {
+                      _errorMensaje = 'Todos los campos son obligatorios';
+                    });
+                    return;
+                  }
+
+                  // VALIDACIÓN 2: Formato período
+                  final validacionPeriodo = _validarPeriodo(nuevoPeriodo);
+                  if (validacionPeriodo != null) {
+                    setDialogState(() {
+                      _errorMensaje = validacionPeriodo;
+                    });
+                    return;
+                  }
+
+                  // VALIDACIÓN 3: Formato fechas
+                  final validacionFechas = _validarFechas(fechaInicio, fechaFin, nuevoPeriodo);
+                  if (validacionFechas != null) {
+                    setDialogState(() {
+                      _errorMensaje = validacionFechas;
+                    });
+                    return;
+                  }
+
+                  // Limpiar error si todo OK
+                  setDialogState(() => _errorMensaje = '');
+
+                  // ENVIAR AL BACKEND
+                  try {
+                    final token = await _getToken();
+                    final response = await http.put(
+                      Uri.parse('${AppConstants.baseUrl}/jornadas/periodo'),
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer $token',
+                      },
+                      body: jsonEncode({
+                        'periodo': nuevoPeriodo,
+                        'fecha_inicio': fechaInicio,
+                        'fecha_fin': fechaFin,
+                      }),
+                    );
+
+                    if (response.statusCode == 200) {
+                      Navigator.pop(context);  // Cerrar diálogo
+
+                      // RECARGAR DATOS
+                      await _cargarPeriodo();
+                      await _cargarJornadas();
+
+                      // MOSTRAR ÉXITO
+                      if (mounted) {
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => AlertDialog(
+                            title: Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.green[600], size: 28),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'Período Configurado',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            content: Text(
+                              'El período $nuevoPeriodo se ha configurado correctamente.\n\nInicio: $fechaInicio\nFin: $fechaFin',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            actions: [
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(context),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(AppConstants.primaryColor),
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: const Text('Aceptar'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    } else {
+                      // ERROR DEL SERVIDOR
+                      final error = jsonDecode(response.body)['message'];
+                      Navigator.pop(context);
+
+                      if (mounted) {
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => AlertDialog(
+                            title: Row(
+                              children: [
+                                Icon(Icons.error_outline, color: Colors.red[600], size: 28),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'Error de Validación',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            content: Text(error, style: const TextStyle(fontSize: 14)),
+                            actions: [
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(context),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: const Text('Entendido'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    setDialogState(() {
+                      _errorMensaje = 'Error de conexión: $e';
+                    });
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(AppConstants.primaryColor),
+                  foregroundColor: Colors.white,
                 ),
+                child: const Text('Guardar'),
               ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final nuevoPeriodo = periodoController.text.trim();
-              final fechaInicio = fechaInicioController.text.trim();
-              final fechaFin = fechaFinController.text.trim();
-
-              // VALIDACIONES FRONTEND
-              if (nuevoPeriodo.isEmpty || fechaInicio.isEmpty || fechaFin.isEmpty) {
-                Notificaciones.mostrarError(context, 'Todos los campos son obligatorios');
-                return;
-              }
-
-              // Validar formato período
-              final validacionPeriodo = _validarPeriodo(nuevoPeriodo);
-              if (validacionPeriodo != null) {
-                Notificaciones.mostrarError(context, validacionPeriodo);
-                return;
-              }
-
-              // Validar formato fechas
-              final validacionFechas = _validarFechas(fechaInicio, fechaFin, nuevoPeriodo);
-              if (validacionFechas != null) {
-                Notificaciones.mostrarError(context, validacionFechas);
-                return;
-              }
-
-              // ENVIAR AL BACKEND
-              try {
-                final token = await _getToken();
-                final response = await http.put(
-                  Uri.parse('${AppConstants.baseUrl}/jornadas/periodo'),
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer $token',
-                  },
-                  body: jsonEncode({
-                    'periodo': nuevoPeriodo,
-                    'fecha_inicio': fechaInicio,
-                    'fecha_fin': fechaFin,
-                  }),
-                );
-
-                if (response.statusCode == 200) {
-                  Navigator.pop(context);  // Cerrar diálogo de configuración
-
-                  // RECARGAR DATOS
-                  await _cargarPeriodo();
-                  await _cargarJornadas();
-
-                  // MOSTRAR DIÁLOGO DE ÉXITO (IGUAL QUE EL DE CONFIGURAR)
-                  if (mounted) {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => AlertDialog(
-                        title: Row(
-                          children: [
-                            Icon(Icons.check_circle, color: Colors.green[600], size: 28),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'Período Configurado',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                        content: Text(
-                          'El período $nuevoPeriodo se ha configurado correctamente.\n\nInicio: $fechaInicio\nFin: $fechaFin',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        actions: [
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(AppConstants.primaryColor),
-                              foregroundColor: Colors.white,
-                            ),
-                            child: const Text('Aceptar'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                } else {
-                  // ERROR: Mostrar diálogo de error
-                  final error = jsonDecode(response.body)['message'];
-                  Navigator.pop(context);  // Cerrar diálogo de configuración
-
-                  if (mounted) {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => AlertDialog(
-                        title: Row(
-                          children: [
-                            Icon(Icons.error_outline, color: Colors.red[600], size: 28),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'Error de Validación',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                        content: Text(
-                          error,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        actions: [
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                            ),
-                            child: const Text('Entendido'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                }
-
-              } catch (e) {
-                if (mounted) {
-                  Notificaciones.mostrarError(context, 'Error de conexión: $e');
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(AppConstants.primaryColor),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Guardar'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -802,6 +843,16 @@ class _JornadasScreenState extends State<JornadasScreen> {
   }
 
   Widget _buildJornadaInfo() {
+    // Verificar si período está vencido
+    final bool periodoVencido = _jornadaDelDia['activo'] == 0 ||
+        _jornadaDelDia['activo'] == false;
+
+    // SI PERÍODO VENCIDO, NO MOSTRAR JORNADAS
+    if (periodoVencido) {
+      return const SizedBox.shrink();  // Widget vacío
+    }
+
+    // SI PERÍODO ACTIVO, MOSTRAR JORNADAS NORMALES
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -814,9 +865,7 @@ class _JornadasScreenState extends State<JornadasScreen> {
               icono: Icons.wb_sunny,
               color: Colors.amber,
             ),
-
           const SizedBox(height: 16),
-
           if (_jornadaDelDia['hora_inicio_vespertina'] != null)
             _buildJornadaCard(
               titulo: 'Jornada Vespertina',

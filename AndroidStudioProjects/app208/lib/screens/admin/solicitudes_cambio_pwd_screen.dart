@@ -85,7 +85,7 @@ class _SolicitudesCambioPwdScreenState extends State<SolicitudesCambioPwdScreen>
           errorMsg = errorData['message'] ?? errorMsg;
         } catch (e) {
           errorMsg = 'Error ${response.statusCode}';
-          print('❌ Error: $errorMsg');
+          print('Error: $errorMsg');
 
           if (mounted) {
             Notificaciones.mostrarError(context, errorMsg);
@@ -93,7 +93,7 @@ class _SolicitudesCambioPwdScreenState extends State<SolicitudesCambioPwdScreen>
         }
       }
     } catch (e) {
-      print('❌ Error de conexión: $e');
+      print('Error de conexión: $e');
       if (mounted) {
         Notificaciones.mostrarError(context, 'Error de conexión: $e');
       }

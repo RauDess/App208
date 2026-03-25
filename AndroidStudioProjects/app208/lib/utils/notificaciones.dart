@@ -87,7 +87,7 @@ class Notificaciones {
           borderRadius: BorderRadius.circular(12),
         ),
         margin: const EdgeInsets.all(16),
-        duration: duracion ?? const Duration(seconds: 3),
+        duration: duracion ?? const Duration(milliseconds: 1200),
         elevation: 6,
       ),
     );

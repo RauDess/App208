@@ -174,7 +174,7 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          Notificaciones.mostrarExito(context, '✓ $nombre aprobado correctamente');
+          Notificaciones.mostrarExito(context, '$nombre aprobado correctamente');
         }
       }
     } catch (e) {
@@ -200,7 +200,7 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          Notificaciones.mostrarAdvertencia(context, '✗ Solicitud de $nombre rechazada');
+          Notificaciones.mostrarAdvertencia(context, 'Solicitud de $nombre rechazada');
         }
       }
     } catch (e) {
@@ -212,7 +212,6 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
 
   Future<void> _aprobarRechazado(int id, String nombre) async {
     final token = await _getToken();
-
     try {
       final response = await http.put(
         Uri.parse('${AppConstants.baseUrl}/usuarios/$id/aprobar-rechazado'),
@@ -226,7 +225,7 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          Notificaciones.mostrarExito(context, '✓ $nombre aprobado (rechazo revertido)');
+          Notificaciones.mostrarExito(context, '$nombre aprobado (rechazo revertido)');
         }
       }
     } catch (e) {
@@ -252,7 +251,7 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          Notificaciones.mostrarError(context, '⊗ $nombre eliminado permanentemente');
+          Notificaciones.mostrarExito(context, '$nombre eliminado permanentemente');
         }
       }
     } catch (e) {
@@ -278,7 +277,7 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          Notificaciones.mostrarAdvertencia(context, '⊘ $nombre desactivado');
+          Notificaciones.mostrarAdvertencia(context, '$nombre desactivado');
         }
       }
     } catch (e) {
@@ -304,7 +303,7 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          Notificaciones.mostrarExito(context, '✓ $nombre reactivado');
+          Notificaciones.mostrarExito(context, '$nombre reactivado');
         }
       }
     } catch (e) {
@@ -356,7 +355,7 @@ class _AprobarUsuariosScreenState extends State<AprobarUsuariosScreen>
         await _cargarTodosLosUsuarios();
 
         if (mounted) {
-          Notificaciones.mostrarInfo(context, '✎ Rol de $nombreUsuario actualizado a $nombreNuevoRol');
+          Notificaciones.mostrarInfo(context, 'Rol de $nombreUsuario actualizado a $nombreNuevoRol');
         }
       }
     } catch (e) {

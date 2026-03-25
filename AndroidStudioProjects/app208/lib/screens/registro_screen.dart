@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../utils/constants.dart';
-
+import 'package:app208/utils/notificaciones.dart';
 
 class RegistroScreen extends StatefulWidget {
   const RegistroScreen({super.key});
@@ -64,12 +64,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_rolSeleccionado.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor, selecciona tu rol'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      Notificaciones.mostrarError(context, 'Por favor, selecciona tu rol');
       return;
     }
 
@@ -109,9 +104,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
-      );
+      Notificaciones.mostrarError(context, result['message']);
     }
   }
 

@@ -10,6 +10,7 @@ import '../models/usuario.dart';
 import 'control_luces_screen.dart';
 import 'registro_screen.dart';
 import 'dart:convert';
+import 'package:app208/utils/notificaciones.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -91,13 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   // NO configuró → Hacer logout y volver al login
                   await _authService.logout();
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Debes configurar tus preguntas de seguridad para continuar'),
-                        backgroundColor: Colors.red,
-                        duration: Duration(seconds: 3),
-                      ),
-                    );
+                    Notificaciones.mostrarError(context, 'Debes configurar tus preguntas de seguridad para continuar');
                   }
                 }
                 return;
@@ -117,13 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } else {
       // Mostrar Error
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      Notificaciones.mostrarError(context, result['message']);
     }
   }
 

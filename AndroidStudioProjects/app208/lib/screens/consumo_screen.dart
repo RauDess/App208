@@ -449,14 +449,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
           setState(() {
             _reportes = reportesActualizados;
           });
-          -
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['message']),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          Notificaciones.mostrarExito(context, data['message']);
 
           // Cerrar el bottom sheet y volver a abrirlo para refrescar
           Navigator.pop(contextSheet);
@@ -466,14 +459,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
         // Ya existe un reporte
         final data = jsonDecode(response.body);
         if (mounted) {
-          -
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['message']),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          Notificaciones.mostrarAdvertencia(context, data['message']);
         }
       } else {
         if (mounted) {
@@ -714,7 +700,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
           setState(() {
             _reportes = reportesActualizados;  // ← ACTUALIZAR LISTA
           });
-          Notificaciones.mostrarExito(context, '✓ Reporte eliminado correctamente');
+          Notificaciones.mostrarExito(context, 'Reporte eliminado correctamente');
           Navigator.pop(context);  // Cierra el BottomSheet actual
           _mostrarReportes();      // Reabre con lista actualizada
         }
@@ -813,7 +799,7 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
         final filePath = await FlutterFileDialog.saveFile(params: params);
 
         if (filePath != null && mounted) {
-          Notificaciones.mostrarExito(context, '✓ PDF guardado correctamente');
+          Notificaciones.mostrarExito(context, 'PDF guardado correctamente');
         }
       } else {
         // iOS
@@ -826,7 +812,6 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
         await file.writeAsBytes(bytes);
 
         if (mounted) {
-          -
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('PDF guardado: $filename'),

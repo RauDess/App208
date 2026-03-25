@@ -3479,15 +3479,30 @@ def obtener_jornada(current_user_id, dia):
     print(f"\n[OBTENER JORNADA] Día: {dia}")
     
     try:
+        # Obtener período del query parameter (opcional)
+        periodo = request.args.get('periodo')
+        
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        cursor.execute("""
-            SELECT dia_semana, hora_inicio_matutina, hora_fin_matutina,
-                   hora_inicio_vespertina, hora_fin_vespertina, periodo
-            FROM jornadas 
-            WHERE LOWER(dia_semana) = LOWER(%s) AND activo = 1
-        """, (dia,))
+        # Si se especifica período, traer de ese período
+        # Si no, traer del período activo
+        if periodo:
+            print(f" Buscando jornada del período: {periodo}")
+            cursor.execute("""
+                SELECT dia_semana, hora_inicio_matutina, hora_fin_matutina,
+                       hora_inicio_vespertina, hora_fin_vespertina, periodo, activo
+                FROM jornadas 
+                WHERE LOWER(dia_semana) = LOWER(%s) AND periodo = %s
+            """, (dia, periodo))
+        else:
+            print(f" Buscando jornada del período activo")
+            cursor.execute("""
+                SELECT dia_semana, hora_inicio_matutina, hora_fin_matutina,
+                       hora_inicio_vespertina, hora_fin_vespertina, periodo, activo
+                FROM jornadas 
+                WHERE LOWER(dia_semana) = LOWER(%s) AND activo = 1
+            """, (dia,))
         
         jornada = cursor.fetchone()
         cursor.close()
@@ -3509,14 +3524,15 @@ def obtener_jornada(current_user_id, dia):
             jornada['hora_inicio_vespertina'] = timedelta_to_str(jornada.get('hora_inicio_vespertina'))
             jornada['hora_fin_vespertina'] = timedelta_to_str(jornada.get('hora_fin_vespertina'))
                 
-            print(f"Jornada encontrada: {jornada}")
+            print(f" Jornada encontrada: {jornada}")
+            print(f" Período: {jornada['periodo']}, Activo: {jornada['activo']}")
             return jsonify(jornada), 200
         else:
-            print(f"No se encontró jornada activa para: {dia}")
+            print(f" No se encontró jornada para: {dia}")
             return jsonify({'message': f'No se encontró jornada para {dia}'}), 404
             
     except Exception as e:
-        print(f"ERROR: {str(e)}")
+        print(f" ERROR: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'message': f'Error: {str(e)}'}), 500
@@ -3631,7 +3647,6 @@ def actualizar_jornada(current_user_id, dia):
         traceback.print_exc()
         return jsonify({'message': f'Error: {str(e)}'}), 500
 
-    
 # ============================================
 # ENDPOINT: GESTIONAR PERIODO DE LA JORNADA
 # ============================================
@@ -3838,10 +3853,10 @@ def gestionar_periodo(current_user_id):
                 
             else:
                 print(f" Creando nuevas jornadas para período {nuevo_periodo}...")
-                
+    
                 # Desactivar períodos anteriores
                 cursor.execute("UPDATE jornadas SET activo = 0")
-                
+    
                 # Crear jornadas con horarios en 00:00:00
                 jornadas_vacias = [
                     ('Lunes', '00:00:00', '00:00:00', '00:00:00', '00:00:00'),
