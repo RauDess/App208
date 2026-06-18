@@ -787,8 +787,11 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
     try {
       if (Platform.isAndroid) {
         // Android - Usar selector de archivos del sistema
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final filename = 'Reporte_Consumo_$idReporte\_$timestamp.pdf';
+        final hoy = DateTime.now();
+        final dia = hoy.day.toString().padLeft(2, '0');
+        final mes = hoy.month.toString().padLeft(2, '0');
+        final ano = hoy.year;
+        final filename = 'Reporte_Consumo_${ano}_${mes}_${dia}.pdf';
 
         final params = SaveFileDialogParams(
           data: Uint8List.fromList(bytes),
@@ -803,11 +806,13 @@ class _ConsumoScreenState extends State<ConsumoScreen> {
         }
       } else {
         // iOS
+        final hoy = DateTime.now();
+        final dia = hoy.day.toString().padLeft(2, '0');
+        final mes = hoy.month.toString().padLeft(2, '0');
+        final ano = hoy.year;
         final directory = await getApplicationDocumentsDirectory();
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final filename = 'Reporte_Consumo_$idReporte\_$timestamp.pdf';
+        final filename = 'Reporte_Consumo_${ano}_${mes}_${dia}.pdf';
         final filePath = '${directory.path}/$filename';
-
         final file = File(filePath);
         await file.writeAsBytes(bytes);
 

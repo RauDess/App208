@@ -112,7 +112,7 @@ class _EditarDatosScreenState extends State<EditarDatosScreen> {
         /// NO actualizar SharedPreferences - los datos vienen del backend
         if (mounted) {
           Navigator.pop(context, true);
-          Notificaciones.mostrarExito(context, '✓ Datos actualizados correctamente');
+          Notificaciones.mostrarExito(context, 'Datos actualizados correctamente');
         }
       } else {
         final error = jsonDecode(response.body)['message'];

@@ -145,9 +145,6 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
         // Solo mostrar si realmente cambió algo (no si ya estaba en ese estado)
         if (nuevoEstado != estadoAnterior) {
           if (mounted) {
-            nuevoEstado
-                ? Notificaciones.mostrarExito(context, 'Grupo 1 encendido')
-                : Notificaciones.mostrarInfo(context, 'Grupo 1 apagado');
           }
         }
       } else {
@@ -207,9 +204,6 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
         // Solo mostrar si realmente cambió algo (no si ya estaba en ese estado)
         if (nuevoEstado != estadoAnterior) {
           if (mounted) {
-            nuevoEstado
-                ? Notificaciones.mostrarExito(context, 'Grupo 2 encendido')
-                : Notificaciones.mostrarInfo(context, 'Grupo 2 apagado');
           }
         }
       } else {
@@ -874,7 +868,6 @@ class _ControlLucesScreenState extends State<ControlLucesScreen> {
         }
 
         if (mounted) {
-          Notificaciones.mostrarExito(context, 'Luces encendidas');
         }
       }
 

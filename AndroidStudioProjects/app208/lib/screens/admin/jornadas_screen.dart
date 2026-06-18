@@ -17,56 +17,150 @@ class JornadasScreen extends StatefulWidget {
   State<JornadasScreen> createState() => _JornadasScreenState();
 }
 
-// Formatea fecha: YYYY-MM-DD (0000-00-00)
-class _FechaInputFormatter extends TextInputFormatter {
+// FORMATTER PARA PERÍODO: YYYY-N
+class _PeriodoFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
       TextEditingValue oldValue,
       TextEditingValue newValue,
       ) {
-    String text = newValue.text;
+    final oldText = oldValue.text;
+    final newText = newValue.text;
+    final oldSelection = oldValue.selection;
+    final newSelection = newValue.selection;
 
-    // Permitir vacío
-    if (text.isEmpty) {
+    // Si está borrando, permitir
+    if (newText.length < oldText.length) {
       return newValue;
     }
 
-    // Remover guiones
-    String digits = text.replaceAll('-', '');
+    // Extraer solo dígitos
+    final digitsOnly = newText.replaceAll('-', '');
 
-    // Solo dígitos
-    if (!RegExp(r'^\d*$').hasMatch(digits)) {
+    // Solo números
+    if (digitsOnly.isNotEmpty && !RegExp(r'^\d+$').hasMatch(digitsOnly)) {
       return oldValue;
     }
 
-    // Limitar a 8 dígitos
-    if (digits.length > 8) {
+    // Máximo 5 dígitos
+    if (digitsOnly.length > 5) {
+      return oldValue;
+    }
+
+    // Validar último dígito si ya hay 5
+    if (digitsOnly.length == 5) {
+      if (digitsOnly[4] != '1' && digitsOnly[4] != '2') {
+        return oldValue;
+      }
+    }
+
+    // Formatear
+    String formatted = '';
+    int cursorPosition = newSelection.baseOffset;
+
+    if (digitsOnly.isEmpty) {
+      formatted = '';
+      cursorPosition = 0;
+    } else if (digitsOnly.length <= 4) {
+      formatted = digitsOnly;
+      cursorPosition = formatted.length;
+
+      // AUTOMÁTICO: Si tiene 4 dígitos, agregar guión
+      if (digitsOnly.length == 4) {
+        formatted = '$formatted-';
+        cursorPosition = formatted.length;
+      }
+    } else {
+      // YYYY-N
+      formatted = '${digitsOnly.substring(0, 4)}-${digitsOnly.substring(4)}';
+      cursorPosition = formatted.length;
+    }
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: cursorPosition),
+    );
+  }
+}
+
+// FORMATTER PARA FECHAS: YYYY/MM/DD
+class _FechaSlashFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue,
+      TextEditingValue newValue,
+      ) {
+    final oldText = oldValue.text;
+    final newText = newValue.text;
+    final oldSelection = oldValue.selection;
+    final newSelection = newValue.selection;
+
+    // Si está borrando, permitir
+    if (newText.length < oldText.length) {
+      return newValue;
+    }
+
+    // Extraer solo dígitos
+    final digitsOnly = newText.replaceAll('/', '');
+
+    // Solo números
+    if (digitsOnly.isNotEmpty && !RegExp(r'^\d+$').hasMatch(digitsOnly)) {
+      return oldValue;
+    }
+
+    // Máximo 8 dígitos
+    if (digitsOnly.length > 8) {
       return oldValue;
     }
 
     // Formatear
     String formatted = '';
+    int cursorPosition = newSelection.baseOffset;
 
-    if (digits.length <= 4) {
-      formatted = digits;
-    } else if (digits.length <= 6) {
-      formatted = '${digits.substring(0, 4)}-${digits.substring(4)}';
+    if (digitsOnly.isEmpty) {
+      formatted = '';
+      cursorPosition = 0;
+    } else if (digitsOnly.length <= 4) {
+      // Solo año
+      formatted = digitsOnly;
+      cursorPosition = formatted.length;
+
+      // AUTOMÁTICO: Si tiene 4 dígitos, agregar barra
+      if (digitsOnly.length == 4) {
+        formatted = '$formatted/';
+        cursorPosition = formatted.length;
+      }
+    } else if (digitsOnly.length <= 6) {
+      // Año + mes
+      formatted = '${digitsOnly.substring(0, 4)}/${digitsOnly.substring(4)}';
+      cursorPosition = formatted.length;
+
+      // AUTOMÁTICO: Si tiene 6 dígitos, agregar barra
+      if (digitsOnly.length == 6) {
+        formatted = '$formatted/';
+        cursorPosition = formatted.length;
+      }
     } else {
-      formatted = '${digits.substring(0, 4)}-${digits.substring(4, 6)}-${digits.substring(6)}';
+      // Año + mes + día
+      formatted = '${digitsOnly.substring(0, 4)}/${digitsOnly.substring(4, 6)}/${digitsOnly.substring(6)}';
+      cursorPosition = formatted.length;
     }
 
     return TextEditingValue(
       text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
+      selection: TextSelection.collapsed(offset: cursorPosition),
     );
   }
 }
+
 
 class _JornadasScreenState extends State<JornadasScreen> {
   String _diaSeleccionado = 'Lunes';
   Map<String, dynamic> _jornadaDelDia = {};
   bool _isLoading = true;
   String _periodoActual = '';
+  String _fechaInicioPeriodo = '';
+  String _fechaFinPeriodo = '';
 
   //Creacion de controles
   final TextEditingController _periodoController = TextEditingController();
@@ -126,6 +220,8 @@ class _JornadasScreenState extends State<JornadasScreen> {
         final data = jsonDecode(response.body);
         setState(() {
           _periodoActual = data['periodo'] ?? '';
+          _fechaInicioPeriodo = data['fecha_inicio_periodo'] ?? '';
+          _fechaFinPeriodo = data['fecha_fin_periodo'] ?? '';
         });
       }
     } catch (e) {
@@ -283,14 +379,14 @@ class _JornadasScreenState extends State<JornadasScreen> {
                     controller: _periodoController,
                     keyboardType: TextInputType.number,
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
-                      LengthLimitingTextInputFormatter(10),
+                      _PeriodoFormatter(),  // ← Nuevo formatter
+                      LengthLimitingTextInputFormatter(6),
                     ],
                     decoration: const InputDecoration(
                       labelText: 'Período',
                       hintText: 'YYYY-N',
                       border: OutlineInputBorder(),
-                      helperText: 'Formato: YYYY-1 o YYYY-2',
+                      helperText: 'Formato: YYYY-N',
                       prefixIcon: Icon(Icons.calendar_today),
                     ),
                   ),
@@ -301,14 +397,14 @@ class _JornadasScreenState extends State<JornadasScreen> {
                     controller: _fechaInicioController,
                     keyboardType: TextInputType.number,
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
+                      _FechaSlashFormatter(),  // ← Nuevo formatter
                       LengthLimitingTextInputFormatter(10),
                     ],
                     decoration: const InputDecoration(
                       labelText: 'Fecha de inicio',
-                      hintText: 'YYYY-MM-DD',
+                      hintText: 'YYYY/MM/DD',
                       border: OutlineInputBorder(),
-                      helperText: 'Formato: YYYY-MM-DD',
+                      helperText: 'Formato: YYYY/MM/DD',
                       prefixIcon: Icon(Icons.event),
                     ),
                   ),
@@ -319,18 +415,18 @@ class _JornadasScreenState extends State<JornadasScreen> {
                     controller: _fechaFinController,
                     keyboardType: TextInputType.number,
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
+                      _FechaSlashFormatter(),  // ← Nuevo formatter
                       LengthLimitingTextInputFormatter(10),
                     ],
                     decoration: const InputDecoration(
                       labelText: 'Fecha de fin',
-                      hintText: 'YYYY-MM-DD',
+                      hintText: 'YYYY/MM/DD',  // ← Cambiar
                       border: OutlineInputBorder(),
-                      helperText: 'Formato: YYYY-MM-DD',
+                      helperText: 'Formato: YYYY/MM/DD',
                       prefixIcon: Icon(Icons.event_available),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
 
                   // NOTA INFORMATIVA
                   Container(
@@ -346,7 +442,8 @@ class _JornadasScreenState extends State<JornadasScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'El período debe tener al menos 4 meses de duración',
+                            'El período debe tener al menos 4 meses de duración.\n'
+                                'La fecha de inicio y fin son referentes al inicio y fin de las clases.',
                             style: TextStyle(fontSize: 12, color: Colors.blue[700]),
                           ),
                         ),
@@ -402,6 +499,9 @@ class _JornadasScreenState extends State<JornadasScreen> {
                   // ENVIAR AL BACKEND
                   try {
                     final token = await _getToken();
+                    // Convertir formato YYYY/MM/DD a YYYY-MM-DD para el backend
+                    final fechaInicioBackend = fechaInicio.replaceAll('/', '-');
+                    final fechaFinBackend = fechaFin.replaceAll('/', '-');
                     final response = await http.put(
                       Uri.parse('${AppConstants.baseUrl}/jornadas/periodo'),
                       headers: {
@@ -410,8 +510,8 @@ class _JornadasScreenState extends State<JornadasScreen> {
                       },
                       body: jsonEncode({
                         'periodo': nuevoPeriodo,
-                        'fecha_inicio': fechaInicio,
-                        'fecha_fin': fechaFin,
+                        'fecha_inicio': fechaInicioBackend,
+                        'fecha_fin': fechaFinBackend,
                       }),
                     );
 
@@ -458,37 +558,10 @@ class _JornadasScreenState extends State<JornadasScreen> {
                     } else {
                       // ERROR DEL SERVIDOR
                       final error = jsonDecode(response.body)['message'];
-                      Navigator.pop(context);
-
-                      if (mounted) {
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (context) => AlertDialog(
-                            title: Row(
-                              children: [
-                                Icon(Icons.error_outline, color: Colors.red[600], size: 28),
-                                const SizedBox(width: 12),
-                                const Text(
-                                  'Error de Validación',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                            content: Text(error, style: const TextStyle(fontSize: 14)),
-                            actions: [
-                              ElevatedButton(
-                                onPressed: () => Navigator.pop(context),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: const Text('Entendido'),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
+                      setDialogState(() {
+                        _errorMensaje = error;  // ← Mostrar error DENTRO del modal
+                      });
+                      return;
                     }
                   } catch (e) {
                     setDialogState(() {
@@ -530,13 +603,12 @@ class _JornadasScreenState extends State<JornadasScreen> {
     if (periodo_num != '1' && periodo_num != '2') {
       return 'El periodo debe ser 1 o 2';
     }
-
     return null; // Válido
   }
 
   String? _validarFechas(String fechaInicio, String fechaFin, String periodo) {
-    // Validar formato YYYY-MM-DD
-    final regexFecha = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$');
+    // Validar formato YYYY/MM/DD
+    final regexFecha = RegExp(r'^(\d{4})/(\d{2})/(\d{2})$');
     final regexPeriodo = RegExp(r'^(\d{4})-([1-2])$');
 
     final matchInicio = regexFecha.firstMatch(fechaInicio);
@@ -633,7 +705,8 @@ class _JornadasScreenState extends State<JornadasScreen> {
       final diferencia = fin.difference(inicio).inDays;
 
       if (diferencia < 120) {
-        return 'El período debe tener al menos 120 días (4 meses). Actual: $diferencia días';
+        final dias_text = diferencia == 1 ? 'día' : 'días';
+        return 'El período debe tener al menos 120 días (4 meses). Actual: $diferencia $dias_text';
       }
 
       if (diferencia > 150) {
@@ -776,8 +849,21 @@ class _JornadasScreenState extends State<JornadasScreen> {
       ),
       floatingActionButton: widget.usuario.rol == 'coordinador'
           ? FloatingActionButton.extended(
-        onPressed: () => _mostrarDialogoEditarJornada(),
-        backgroundColor: const Color(AppConstants.primaryColor),
+        onPressed: _periodoActual.isEmpty ||
+            _fechaInicioPeriodo.isEmpty ||
+            _fechaFinPeriodo.isEmpty
+            ? null  // ← DESHABILITA si falta algo
+            : () => _mostrarDialogoEditarJornada(),
+        tooltip: _periodoActual.isEmpty ||
+            _fechaInicioPeriodo.isEmpty ||
+            _fechaFinPeriodo.isEmpty
+            ? 'Configure un período completo primero'
+            : 'Editar Jornada',
+        backgroundColor: _periodoActual.isEmpty ||
+            _fechaInicioPeriodo.isEmpty ||
+            _fechaFinPeriodo.isEmpty
+            ? Colors.grey
+            : const Color(AppConstants.primaryColor),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.edit),
         label: const Text('Editar Jornada'),
@@ -843,9 +929,14 @@ class _JornadasScreenState extends State<JornadasScreen> {
   }
 
   Widget _buildJornadaInfo() {
+
+    print('DEBUG activo: ${_jornadaDelDia['activo']}');  // ← AGREGAR ESTA LÍNEA
+
     // Verificar si período está vencido
     final bool periodoVencido = _jornadaDelDia['activo'] == 0 ||
         _jornadaDelDia['activo'] == false;
+
+    print('DEBUG periodoVencido: $periodoVencido');  // ← Y ESTA
 
     // SI PERÍODO VENCIDO, NO MOSTRAR JORNADAS
     if (periodoVencido) {

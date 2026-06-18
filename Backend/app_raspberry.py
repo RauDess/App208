@@ -13,7 +13,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta, timezone, time as dt_time
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, A4
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
@@ -26,7 +26,20 @@ import platform
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.cluster import KMeans
+from reportlab.pdfgen import canvas
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.graphics.charts.legends import Legend
+from reportlab.graphics.shapes import Drawing, String, Rect
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
+try:
+    pdfmetrics.registerFont(TTFont('OpenSansBold', '/usr/share/fonts/truetype/open-sans/OpenSans-Bold.ttf'))
+except Exception as e:
+    print(f"No se pudo cargar OpenSans Bold: {e}")
+
+    
 # Detectar si estamos en Raspberry Pi
 ES_RASPBERRY = platform.machine().startswith('arm') or platform.machine().startswith('aarch')
 
@@ -243,7 +256,7 @@ def generar_pdf_reporte(reporte_data):
         'CustomTitle',
         parent=styles['Heading1'],
         fontSize=24,
-        textColor=colors.HexColor('#1a237e'),
+        textColor=colors.black,
         spaceAfter=30,
         alignment=TA_CENTER,
         fontName='Helvetica-Bold'
@@ -254,7 +267,7 @@ def generar_pdf_reporte(reporte_data):
         'CustomSubtitle',
         parent=styles['Heading2'],
         fontSize=14,
-        textColor=colors.HexColor('#1a237e'),
+        textColor=colors.black,
         spaceAfter=12,
         spaceBefore=12,
         fontName='Helvetica-Bold'
@@ -360,7 +373,6 @@ def generar_pdf_reporte(reporte_data):
     doc.build(elements)
     buffer.seek(0)
     return buffer
-
 
 app = Flask(__name__)
 scheduler = BackgroundScheduler()  
@@ -1309,7 +1321,6 @@ def aprobar_usuario(current_user_id, id_usuario):
         traceback.print_exc()
         return jsonify({'message': f'Error del servidor: {str(e)}'}), 500
 
-
 # ============================================
 # ENDPOINT: RECHAZAR USUARIO
 # ============================================
@@ -1349,7 +1360,6 @@ def rechazar_usuario(current_user_id, id_usuario):
         import traceback
         traceback.print_exc()
         return jsonify({'message': f'Error del servidor: {str(e)}'}), 500
-
 
 # ============================================
 # ENDPOINT: OBTENER USUARIOS RECHAZADOS
@@ -1549,7 +1559,6 @@ def usuarios_activos(current_user_id):
         traceback.print_exc()
         return jsonify({'message': f'Error del servidor: {str(e)}'}), 500
 
-
 # ============================================
 # ENDPOINT: DESACTIVAR USUARIO
 # ============================================
@@ -1593,7 +1602,6 @@ def desactivar_usuario(current_user_id, id_usuario):
         import traceback
         traceback.print_exc()
         return jsonify({'message': f'Error del servidor: {str(e)}'}), 500
-
 
 # ============================================
 # ENDPOINT: EDITAR ROL DE USUARIO
@@ -2498,7 +2506,6 @@ def consumo_hoy(current_user_id):
         traceback.print_exc()
         return jsonify({'message': f'Error del servidor: {str(e)}'}), 500
 
-
 # ============================================
 # ENDPOINT: CONSUMO SEMANAL
 # ============================================
@@ -2789,138 +2796,6 @@ def listar_reportes(current_user_id):
         
         print(f"Reportes encontrados: {len(reportes)}")
         return jsonify({'reportes': reportes}), 200
-        
-    except Exception as e:
-        print(f"ERROR: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'message': f'Error: {str(e)}'}), 500
-
-# ============================================
-# ENDPOINT: GENERAR REPORTE SEMANAL
-# ============================================
-@app.route('/api/reportes/generar', methods=['POST'])
-@token_required
-def generar_reporte(current_user_id):
-    """Genera un nuevo reporte semanal de consumo"""
-    print("\n[GENERAR REPORTE]")
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        
-        # Verificar que es coordinador
-        cursor.execute(
-            "SELECT rol FROM usuarios WHERE id_usuario = %s",
-            (current_user_id,)
-        )
-        usuario = cursor.fetchone()
-        
-        if usuario['rol'] != 'coordinador':
-            cursor.close()
-            conn.close()
-            return jsonify({'message': 'No autorizado'}), 403
-        
-        # Calcular fechas de la semana (Lunes-Viernes)
-        from datetime import datetime, timedelta
-        
-        hoy = datetime.now().date()
-        dias_desde_lunes = hoy.weekday()  # 0=Lunes, 4=Viernes
-        lunes_actual = hoy - timedelta(days=dias_desde_lunes)
-        
-        # Si hoy es sábado o domingo, usar la semana anterior
-        if hoy.weekday() >= 5:  # 5=Sábado, 6=Domingo
-            viernes_actual = lunes_actual - timedelta(days=3)
-            lunes_actual = viernes_actual - timedelta(days=4)
-            fecha_inicio = lunes_actual
-            fecha_fin = viernes_actual
-        else:
-            # Semana actual hasta hoy (o hasta viernes si ya pasó)
-            if hoy.weekday() <= 4:  # Lunes-Viernes
-                fecha_inicio = lunes_actual
-                fecha_fin = hoy if hoy.weekday() <= 4 else lunes_actual + timedelta(days=4)
-            else:
-                fecha_inicio = lunes_actual
-                fecha_fin = lunes_actual + timedelta(days=4)  # Viernes
-        
-        fecha_inicio_str = fecha_inicio.strftime('%Y-%m-%d')
-        fecha_fin_str = fecha_fin.strftime('%Y-%m-%d')
-        
-        # Obtener período actual
-        cursor.execute(
-            "SELECT periodo FROM jornadas WHERE activo = 1 LIMIT 1"
-        )
-        periodo_actual = cursor.fetchone()
-        periodo = periodo_actual['periodo'] if periodo_actual else '2025-2'
-        
-        # Calcular consumo total en el rango de fechas (SOLO días laborables)
-        cursor.execute(
-            """SELECT 
-                SUM(consumo_kW) as total_consumo,
-                SUM(encendido_segundos) as total_segundos
-            FROM consumo
-            WHERE DATE(dato_encendido) >= %s 
-            AND DATE(dato_encendido) <= %s
-            AND DAYOFWEEK(dato_encendido) BETWEEN 2 AND 6""",  # Lunes=2, Viernes=6
-            (fecha_inicio_str, fecha_fin_str)
-        )
-        resultado = cursor.fetchone()
-        
-        total_consumo = float(resultado['total_consumo'] or 0)
-        total_segundos = int(resultado['total_segundos'] or 0)
-        total_horas = round(total_segundos / 3600, 2)
-        
-        # Calcular días laborables reales en el rango
-        dias_laborables = 0
-        fecha_temp = fecha_inicio
-        while fecha_temp <= fecha_fin:
-            if fecha_temp.weekday() < 5:  # Lunes-Viernes
-                dias_laborables += 1
-            fecha_temp += timedelta(days=1)
-        
-        promedio_diario = round(total_consumo / dias_laborables, 2) if dias_laborables > 0 else 0
-        
-        # Generar descripción
-        descripcion = f"Semana del {fecha_inicio.strftime('%d/%m')} al {fecha_fin.strftime('%d/%m/%Y')} - Periodo {periodo}"
-        
-        # Verificar si ya existe un reporte para estas fechas
-        cursor.execute(
-            """SELECT id_reporte FROM reportes_consumo 
-            WHERE fecha_inicio = %s AND fecha_fin = %s""",
-            (fecha_inicio_str, fecha_fin_str)
-        )
-        existente = cursor.fetchone()
-        
-        if existente:
-            cursor.close()
-            conn.close()
-            return jsonify({'message': 'Ya existe un reporte para este período'}), 409
-        
-        # Guardar reporte
-        cursor.execute(
-            """INSERT INTO reportes_consumo 
-            (fecha_inicio, fecha_fin, periodo, total_consumo_kWh, total_horas_uso, 
-             promedio_diario_kWh, descripcion, generado_por)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-            (fecha_inicio_str, fecha_fin_str, periodo, total_consumo, total_horas, 
-             promedio_diario, descripcion, current_user_id)
-        )
-        
-        id_reporte = cursor.lastrowid
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        print(f"Reporte generado con ID: {id_reporte}")
-        
-        return jsonify({
-            'message': 'Reporte generado exitosamente',
-            'id_reporte': id_reporte,
-            'descripcion': descripcion,
-            'total_consumo': total_consumo,
-            'total_horas': total_horas,
-            'promedio_diario': promedio_diario
-        }), 200
         
     except Exception as e:
         print(f"ERROR: {str(e)}")
@@ -3654,6 +3529,51 @@ def actualizar_jornada(current_user_id, dia):
 @token_required
 def gestionar_periodo(current_user_id):
     """Obtener o actualizar periodo académico actual"""
+
+    if request.method == 'GET':
+        print("\n[PERIODO] Obteniendo periodo actual")
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+        
+            # Obtener periodo activo CON fechas
+            cursor.execute(
+                "SELECT periodo, fecha_inicio_periodo, fecha_fin_periodo FROM jornadas WHERE activo = 1 LIMIT 1"
+            )
+            result = cursor.fetchone()
+        
+            cursor.close()
+            conn.close()
+        
+            # Si no hay período activo, devolver vacío
+            if not result:
+                print(f" No hay período activo")
+                print("   El coordinador debe crear el período desde la app")
+                return jsonify({
+                    'periodo': '',
+                    'fecha_inicio_periodo': '',
+                    'fecha_fin_periodo': ''
+                }), 200
+        
+            # Si hay período activo, devolver con fechas
+            periodo_actual = result['periodo']
+            fecha_inicio = result['fecha_inicio_periodo']
+            fecha_fin = result['fecha_fin_periodo']
+        
+            print(f" Periodo actual: {periodo_actual}")
+            print(f" Fechas: {fecha_inicio} a {fecha_fin}")
+        
+            return jsonify({
+                'periodo': periodo_actual,
+                'fecha_inicio_periodo': fecha_inicio,
+                'fecha_fin_periodo': fecha_fin
+            }), 200
+        
+        except Exception as e:
+            print(f" ERROR: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'message': f'Error: {str(e)}'}), 500
     
     if request.method == 'GET':
         print("\n[PERIODO] Obteniendo periodo actual")
@@ -3663,7 +3583,7 @@ def gestionar_periodo(current_user_id):
             
             # Obtener periodo activo
             cursor.execute(
-                "SELECT periodo FROM jornadas WHERE activo = 1 LIMIT 1"
+                "SELECT periodo, fecha_inicio_periodo, fecha_fin_periodo FROM jornadas WHERE activo = 1 LIMIT 1"
             )
             result = cursor.fetchone()
             
@@ -3904,25 +3824,77 @@ def gestionar_periodo(current_user_id):
 def verificar_periodo_activo(current_user_id):
     """
     Verifica si el período académico está vigente
+    Y actualiza la BD si el período venció
     """
     try:
-        esta_activo, periodo = periodo_activo()
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
         
-        if esta_activo:
+        # 1: Obtener el período activo actual
+        cursor.execute("""
+            SELECT periodo, fecha_fin_periodo, activo
+            FROM jornadas
+            WHERE activo = 1
+            LIMIT 1
+        """)
+        
+        resultado = cursor.fetchone()
+        
+        if not resultado:
+            # NO HAY PERÍODO ACTIVO
+            return jsonify({
+                'activo': False,
+                'periodo': None,
+                'mensaje': 'No hay período activo. Configure uno nuevo.'
+            }), 200
+        
+        periodo = resultado['periodo']
+        fecha_fin = resultado['fecha_fin_periodo']
+        hoy = datetime.now().date()
+        
+        print(f"[PERIODO ACTIVO] Verificando: {periodo}")
+        print(f"  Fecha fin: {fecha_fin}")
+        print(f"  Hoy: {hoy}")
+        
+        # 2: Verificar si el período vencio
+        if fecha_fin < hoy:
+            # ¡VENCIO! Marcar como inactivo en BD
+            print(f"  PERÍODO VENCIDO - Marcando como inactivo")
+            
+            cursor.execute("""
+                UPDATE jornadas
+                SET activo = 0
+                WHERE periodo = %s
+            """, (periodo,))
+            
+            conn.commit()
+            
+            return jsonify({
+                'activo': False,
+                'periodo': periodo,
+                'mensaje': f'Período {periodo} ha vencido. Configure nuevo período.'
+            }), 200
+        
+        else:
+            # AÚN VIGENTE
+            print(f"  Período aún vigente")
             return jsonify({
                 'activo': True,
                 'periodo': periodo,
                 'mensaje': f'Período {periodo} vigente'
             }), 200
-        else:
-            return jsonify({
-                'activo': False,
-                'periodo': None,
-                'mensaje': 'Período académico vencido. Configure nuevo período.'
-            }), 200
             
     except Exception as e:
+        print(f"ERROR en verificar_periodo_activo: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'message': f'Error: {str(e)}'}), 500
+    
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 ###################################### CONTRASEÑA COORDINADOR ###################################################
 # ============================================
@@ -4306,8 +4278,845 @@ def actualizar_preguntas(current_user_id):
         traceback.print_exc()
         return jsonify({'message': f'Error: {str(e)}'}), 500
 
-
 ###################################### PDF ###################################################
+#============================================
+# FUNCIÓN: GENERAR PDF 
+# ============================================
+"""
+FUNCIÓN MEJORADA V3: generar_pdf_reporte()
+Con TODAS las mejoras:
+Logo 4.5 inches (aumentado)
+Gráficas de barras REALES para Clasificación
+Pie de página reorganizado (sin superposición)
+Línea transparente ELIMINADA
+Fecha completa, menos espacios, K-means 4 filas, notificaciones limpias
+"""
+
+def generar_pdf_reporte(reporte_data, conn):
+    """
+    Genera un PDF profesional del reporte semanal de consumo energético
+    
+    Args:
+        reporte_data: dict con los datos del reporte
+        conn: conexión a BD para consultar clasificación y K-means
+    
+    Returns:
+        BytesIO con el PDF generado
+    """
+    
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, 
+        pagesize=letter, 
+        rightMargin=72, 
+        leftMargin=72,
+        topMargin=72, 
+        bottomMargin=120  # Más espacio para pie de página reorganizado
+    )
+    
+    # ========== ESTILOS ==========
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        textColor=colors.black,
+        spaceAfter=12,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold'
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'CustomSubtitle',
+        parent=styles['Normal'],
+        fontSize=11,
+        textColor=colors.HexColor('#424242'),
+        spaceAfter=12,
+        alignment=TA_CENTER,
+        fontName='Helvetica'
+    )
+    
+    section_style = ParagraphStyle(
+        'SectionTitle',
+        parent=styles['Heading2'],
+        fontSize=12,
+        textColor=colors.black,
+        spaceAfter=8,
+        spaceBefore=6,
+        fontName='Helvetica-Bold'
+    )
+    
+    # ========== OBTENER DATOS DE BD ==========
+    cursor = conn.cursor(dictionary=True)
+    
+    # Extraer fechas del reporte
+    fecha_inicio_str = reporte_data['fecha_inicio']
+    fecha_fin_str = reporte_data['fecha_fin']
+    
+    if isinstance(fecha_inicio_str, str):
+        fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+        fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+    else:
+        fecha_inicio = fecha_inicio_str
+        fecha_fin = fecha_fin_str
+    
+    # Obtener datos de clasificación (7 días)
+    datos_clasificacion = obtener_datos_clasificacion(cursor, fecha_inicio, fecha_fin)
+    
+    # Obtener datos de K-means (últimas 4 semanas máximo)
+    datos_kmeans = obtener_datos_kmeans(cursor)
+    
+    # Determinar si es semana 4+
+    es_semana_4 = len(datos_kmeans) >= 4
+    
+    # ========== CONSTRUIR PDF ==========
+    elements = []
+    
+    # ===== HOJA 1: PORTADA Y RESUMEN =====
+    elements.extend(crear_hoja_1(reporte_data, fecha_inicio, fecha_fin, title_style, subtitle_style, section_style))
+    
+    # ===== HOJA 2: CLASIFICACIÓN + K-MEANS O NOTIFICACIONES =====
+    if es_semana_4:
+        # Semana 4+: Clasificación + K-means en hoja 2
+        elements.append(PageBreak())
+        elements.extend(crear_hoja_2_semana4(
+            datos_clasificacion, 
+            datos_kmeans,
+            section_style
+        ))
+        
+        # ===== HOJA 3: NOTIFICACIONES =====
+        elements.append(PageBreak())
+        elements.extend(crear_hoja_3_notificaciones(
+            reporte_data,
+            datos_clasificacion,
+            datos_kmeans,
+            section_style
+        ))
+    else:
+        # Semanas 1-3: Clasificación + Notificaciones en hoja 2
+        elements.append(PageBreak())
+        elements.extend(crear_hoja_2_semana123(
+            datos_clasificacion,
+            reporte_data,
+            section_style
+        ))
+    
+    # ========== CONSTRUIR PDF CON PIE DE PÁGINA ==========
+    doc.build(
+        elements,
+        onFirstPage=agregar_pie_pagina_mejorado,
+        onLaterPages=agregar_pie_pagina_mejorado
+    )
+    
+    cursor.close()
+    buffer.seek(0)
+    return buffer
+
+# ========== FUNCIONES AUXILIARES ==========
+def obtener_datos_clasificacion(cursor, fecha_inicio, fecha_fin):
+    """Obtiene consumo por día (7 días) para gráfica de clasificación"""
+    
+    dias = []
+    consumo_por_dia = {}
+    
+    # Generar días desde lunes hasta domingo
+    fecha_temp = fecha_inicio
+    while fecha_temp <= fecha_fin:
+        dia_nombre = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][fecha_temp.weekday()]
+        consumo_por_dia[dia_nombre] = 0.0
+        dias.append(dia_nombre)
+        fecha_temp += timedelta(days=1)
+    
+    # Consultar consumo por día
+    cursor.execute("""
+        SELECT 
+            DATE(dato_encendido) as fecha,
+            SUM(
+                CASE 
+                    WHEN estado = 'apagado' THEN consumo_kW
+                    WHEN estado = 'encendido' THEN 
+                        (648 * TIMESTAMPDIFF(SECOND, dato_encendido, NOW())) / 3600000.0
+                    ELSE 0
+                END
+            ) as consumo_kWh
+        FROM consumo
+        WHERE DATE(dato_encendido) >= %s AND DATE(dato_encendido) <= %s
+        GROUP BY DATE(dato_encendido)
+        ORDER BY DATE(dato_encendido)
+    """, (fecha_inicio, fecha_fin))
+    
+    resultados = cursor.fetchall()
+    
+    for row in resultados:
+        fecha = row['fecha']
+        dia_nombre = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][fecha.weekday()]
+        consumo_por_dia[dia_nombre] = float(row['consumo_kWh'] or 0)
+    
+    # Clasificar cada día
+    clasificacion = {}
+    dias_alto = 0
+    dias_medio = 0
+    dias_bajo = 0
+    
+    for dia in dias:
+        consumo = consumo_por_dia[dia]
+        if consumo < 10:
+            clasificacion[dia] = ('Bajo', consumo, 'green')
+            dias_bajo += 1
+        elif consumo < 20:
+            clasificacion[dia] = ('Medio', consumo, 'orange')
+            dias_medio += 1
+        else:
+            clasificacion[dia] = ('Alto', consumo, 'red')
+            dias_alto += 1
+    
+    return {
+        'clasificacion': clasificacion,
+        'dias': dias,
+        'dias_alto': dias_alto,
+        'dias_medio': dias_medio,
+        'dias_bajo': dias_bajo,
+        'consumo_total_semana': sum(consumo_por_dia.values()),
+        'consumo_por_dia': consumo_por_dia
+    }
+
+def obtener_datos_kmeans(cursor):
+    """Obtiene datos de K-means (últimas 4 semanas máximo)"""
+    
+    cursor.execute("""
+        SELECT 
+            YEARWEEK(dato_encendido, 1) as semana_id,
+            DATE(DATE_SUB(dato_encendido, INTERVAL WEEKDAY(dato_encendido) DAY)) as fecha_inicio,
+            SUM(
+                CASE 
+                    WHEN estado = 'apagado' THEN consumo_kW
+                    WHEN estado = 'encendido' THEN 
+                        (648 * TIMESTAMPDIFF(SECOND, dato_encendido, NOW())) / 3600000.0
+                    ELSE 0
+                END
+            ) as consumo_kWh
+        FROM consumo
+        WHERE dato_encendido >= DATE_SUB(CURDATE(), INTERVAL 5 WEEK)
+        AND YEARWEEK(dato_encendido, 1) >= (YEARWEEK(CURDATE(), 1) - 4)
+        GROUP BY YEARWEEK(dato_encendido, 1)
+        HAVING consumo_kWh > 0
+        ORDER BY semana_id DESC
+        LIMIT 4
+    """)
+    
+    semanas = cursor.fetchall()
+    kmeans_data = []
+    
+    for semana in semanas:
+        consumo = float(semana['consumo_kWh'] or 0)
+        
+        # Clasificar cluster
+        if consumo < 50:
+            cluster = 'Bajo'
+        elif consumo < 60:
+            cluster = 'Medio'
+        else:
+            cluster = 'Alto'
+        
+        kmeans_data.append({
+            'fecha_inicio': semana['fecha_inicio'],
+            'consumo': consumo,
+            'cluster': cluster
+        })
+    
+    return kmeans_data
+
+def generar_grafica_clasificacion(datos_clasificacion):
+    """Genera gráfica de barras mejorada para clasificación"""
+    drawing = Drawing(500, 190)
+    drawing.hAlign = 'CENTER'
+    chart = VerticalBarChart()
+    chart.width = 420
+    chart.height = 140
+    chart.x = 40
+    chart.y = 35
+    
+    dias = datos_clasificacion['dias']
+    valores = []
+    colores_map = {
+        'green': colors.HexColor('#10B981'),    # Verde más profesional
+        'orange': colors.HexColor('#F59E0B'),   # Naranja profesional
+        'red': colors.HexColor('#EF4444')       # Rojo profesional
+    }
+    
+    colores_barras = []
+    
+    for dia in dias:
+        if dia in datos_clasificacion['clasificacion']:
+            tipo, consumo, color = datos_clasificacion['clasificacion'][dia]
+            valores.append(consumo)
+            colores_barras.append(colores_map[color])
+        else:
+            valores.append(0)
+            colores_barras.append(colors.HexColor('#E5E7EB'))
+    
+    # Configurar datos
+    chart.data = [valores]
+    chart.categoryAxis.categoryNames = dias
+    chart.categoryAxis.labels.fontSize = 9
+    chart.categoryAxis.labels.fontName = 'Helvetica'
+    chart.categoryAxis.labels.angle = 0
+    
+    # Eje Y mejorado
+    chart.valueAxis.valueMin = 0
+    max_valor = max(valores) if max(valores) > 0 else 10
+    chart.valueAxis.valueMax = max_valor * 1.2
+    chart.valueAxis.labels.fontSize = 8
+    chart.valueAxis.labels.fontName = 'Helvetica'
+    
+    # Estilo de barras
+    chart.bars.strokeColor = colors.HexColor('#D1D5DB')
+    chart.bars.strokeWidth = 0.5
+    chart.barWidth = 0.5
+    
+    # Borde y fondo mejorado
+    chart.strokeColor = colors.HexColor('#9CA3AF')
+    chart.strokeWidth = 1.5
+    
+    drawing.add(chart)
+    return drawing
+
+def crear_hoja_1(reporte_data, fecha_inicio, fecha_fin, title_style, subtitle_style, section_style):
+    """Crea la hoja 1 con portada y resumen"""
+    
+    elements = []
+    
+    # Logo ULEAM - aumentado a 5 inches y menos espacio abajo:
+    logo = None 
+    try:
+        logo = Image('static/logo_uleam.png', width=5*inch, height=4.3*inch)
+        logo.hAlign = 'CENTER'
+    except:
+        print("Logo no encontrado")
+        # Spacer negativo para subirlo:
+    elements.append(Spacer(1, -120))
+
+    if logo:
+        elements.append(logo)
+    elements.append(Spacer(1, -20))
+    
+    # Título
+    elements.append(Paragraph("REPORTE SEMANAL DE CONSUMO ENERGÉTICO", title_style))
+    elements.append(Paragraph("Aula 208 - ULEAM El Carmen", subtitle_style))
+    elements.append(Spacer(1, 16))
+    
+    # Tabla de Información del Período - FECHA COMPLETA
+    elements.append(Paragraph("INFORMACIÓN DEL PERÍODO", section_style))
+    fecha_gen = reporte_data.get('fecha_generacion', datetime.now().strftime('%d/%m/%Y %H:%M'))
+    
+    # Formatear descripción con fecha completa
+    descripcion_formateada = f"Semana del {fecha_inicio.strftime('%d/%m/%Y')} al {fecha_fin.strftime('%d/%m/%Y')} - Periodo {reporte_data.get('periodo', '')}"
+    
+    info_periodo = [
+        ['Período:', descripcion_formateada],
+        ['Fecha de generación:', fecha_gen],
+        ['Período académico:', reporte_data.get('periodo', '')],
+    ]
+    
+    tabla_periodo = Table(info_periodo, colWidths=[2*inch, 4*inch])
+    tabla_periodo.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e3f2fd')),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+        ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
+    
+    elements.append(tabla_periodo)
+    elements.append(Spacer(1, 16))
+    
+    # Tabla de Resumen General
+    elements.append(Paragraph("RESUMEN GENERAL", section_style))
+    
+    costo_estimado = float(reporte_data.get('total_consumo_kWh', 0)) * 0.13
+    
+    datos_resumen = [
+        ['Concepto', 'Valor'],
+        ['Consumo total', f"{reporte_data.get('total_consumo_kWh', 0):.2f} kWh"],
+        ['Horas de uso', f"{reporte_data.get('total_horas_uso', 0):.2f} h"],
+        ['Promedio diario', f"{reporte_data.get('promedio_diario_kWh', 0):.2f} kWh"],
+        ['Costo estimado', f"${costo_estimado:.2f} USD"],
+    ]
+    
+    tabla_resumen = Table(datos_resumen, colWidths=[3*inch, 3*inch])
+    tabla_resumen.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 11),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f5f5f5')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 1), (-1, -1), 10),
+        ('TOPPADDING', (0, 1), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+    ]))
+    
+    elements.append(tabla_resumen)
+    
+    return elements
+
+def crear_hoja_2_semana123(datos_clasificacion, reporte_data, section_style):
+    """Crea hoja 2 para semanas 1-3: Clasificación con gráfica + Notificaciones"""
+    
+    elements = []
+    
+    # Título con menos espacio
+    elements.append(Paragraph("ANÁLISIS INTELIGENTE", section_style))
+    elements.append(Spacer(1, 6))
+    
+    # Sección de Clasificación
+    elements.append(Paragraph("Clasificación de Días (Semana Actual)", section_style))
+    elements.append(Spacer(1, 8))
+
+    # Agregar leyenda encima
+    leyenda = Paragraph("Valores en kWh", ParagraphStyle(
+        'Leyenda',
+        parent=section_style,
+        fontSize=11,
+        textColor=colors.black,
+        fontName='Helvetica-Bold',
+        alignment=TA_CENTER
+    ))
+    elements.append(leyenda)
+    elements.append(Spacer(1, -10))
+    
+    # AGREGAR GRÁFICA DE BARRAS
+    grafica = generar_grafica_clasificacion(datos_clasificacion)
+    elements.append(grafica)
+    elements.append(Spacer(1, 2))
+    
+    # Estadísticas
+    stats_data = [
+        ['Días Alto', 'Días Medio', 'Días Bajo'],
+        [
+            str(datos_clasificacion['dias_alto']),
+            str(datos_clasificacion['dias_medio']),
+            str(datos_clasificacion['dias_bajo'])
+        ]
+    ]
+    
+    tabla_stats = Table(stats_data, colWidths=[1.4*inch, 1.4*inch, 1.4*inch])
+    tabla_stats.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, 0), colors.HexColor('#FFCDD2')),
+        ('BACKGROUND', (1, 0), (1, 0), colors.HexColor('#FFE082')),
+        ('BACKGROUND', (2, 0), (2, 0), colors.HexColor('#A5D6A7')),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    
+    elements.append(tabla_stats)
+    elements.append(Spacer(1, 14))
+    
+    # Notificaciones
+    elements.append(Paragraph("Recomendaciones Automáticas", section_style))
+    elements.append(Spacer(1, 8))
+    
+    notificaciones = generar_notificaciones_dinamicas(datos_clasificacion, None)
+    
+    for notif in notificaciones:
+        notif_table = Table([[notif['titulo'] + '\n' + notif['contenido']]], colWidths=[5.5*inch])
+        notif_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, 0), notif['bg_color']),
+            ('TEXTCOLOR', (0, 0), (0, 0), notif['text_color']),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('VALIGN', (0, 0), (0, 0), 'TOP'),
+            ('FONTNAME', (0, 0), (0, 0), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (0, 0), 9),
+            ('LEFTPADDING', (0, 0), (0, 0), 12),
+            ('RIGHTPADDING', (0, 0), (0, 0), 12),
+            ('TOPPADDING', (0, 0), (0, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (0, 0), 10),
+            ('GRID', (0, 0), (0, 0), 0.5, notif['border_color']),
+        ]))
+        
+        elements.append(notif_table)
+        elements.append(Spacer(1, 8))
+    
+    return elements
+
+def crear_hoja_2_semana4(datos_clasificacion, datos_kmeans, section_style):
+    """Crea hoja 2 para semana 4+: Clasificación con gráfica + K-means"""
+    
+    elements = []
+    
+    # Título con menos espacio
+    elements.append(Paragraph("ANÁLISIS INTELIGENTE", section_style))
+    elements.append(Spacer(1, 6))
+    
+    # Sección de Clasificación
+    elements.append(Paragraph("Clasificación de Días (Semana Actual)", section_style))
+    elements.append(Spacer(1, 8))
+
+    # Agregar leyenda encima
+    leyenda = Paragraph("Valores en kWh", ParagraphStyle(
+        'Leyenda',
+        parent=section_style,
+        fontSize=11,
+        textColor=colors.black,
+        fontName='Helvetica-Bold',
+        alignment=TA_CENTER
+    ))
+    elements.append(leyenda)
+    elements.append(Spacer(1, -10))
+    
+    # AGREGAR GRÁFICA DE BARRAS
+    grafica = generar_grafica_clasificacion(datos_clasificacion)
+    elements.append(grafica)
+    elements.append(Spacer(1, 2))
+    
+    # Estadísticas
+    stats_data = [
+        ['Días Alto', 'Días Medio', 'Días Bajo'],
+        [
+            str(datos_clasificacion['dias_alto']),
+            str(datos_clasificacion['dias_medio']),
+            str(datos_clasificacion['dias_bajo'])
+        ]
+    ]
+    
+    tabla_stats = Table(stats_data, colWidths=[1.4*inch, 1.4*inch, 1.4*inch])
+    tabla_stats.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, 0), colors.HexColor('#FFCDD2')),
+        ('BACKGROUND', (1, 0), (1, 0), colors.HexColor('#FFE082')),
+        ('BACKGROUND', (2, 0), (2, 0), colors.HexColor('#A5D6A7')),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    
+    elements.append(tabla_stats)
+    elements.append(Spacer(1, 12))
+    
+    # Sección K-means
+    elements.append(Paragraph("Patrones de Semanas (K-Means - Últimas 4 Semanas)", section_style))
+    elements.append(Spacer(1, 8))
+    
+    tabla_kmeans = [['Semana', 'Consumo', 'Cluster']]
+    
+    for semana in datos_kmeans:
+        tabla_kmeans.append([
+            semana['fecha_inicio'].strftime('%d/%m/%Y') if hasattr(semana['fecha_inicio'], 'strftime') else str(semana['fecha_inicio']),
+            f"{semana['consumo']:.1f} kWh",
+            semana['cluster']
+        ])
+    
+    tabla_kmeans_report = Table(tabla_kmeans, colWidths=[2*inch, 2*inch, 2*inch])
+    tabla_kmeans_report.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f5f5')]),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    
+    elements.append(tabla_kmeans_report)
+    
+    return elements
+
+def crear_hoja_3_notificaciones(reporte_data, datos_clasificacion, datos_kmeans, section_style):
+    """Crea hoja 3 con notificaciones dinámicas (solo semana 4+)"""
+    
+    elements = []
+    
+    elements.append(Paragraph("RECOMENDACIONES AUTOMÁTICAS", section_style))
+    elements.append(Spacer(1, 12))
+    
+    notificaciones = generar_notificaciones_dinamicas(datos_clasificacion, datos_kmeans)
+    
+    for notif in notificaciones:
+        notif_table = Table([[notif['titulo'] + '\n' + notif['contenido']]], colWidths=[5.5*inch])
+        notif_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, 0), notif['bg_color']),
+            ('TEXTCOLOR', (0, 0), (0, 0), notif['text_color']),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('VALIGN', (0, 0), (0, 0), 'TOP'),
+            ('FONTNAME', (0, 0), (0, 0), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (0, 0), 9),
+            ('LEFTPADDING', (0, 0), (0, 0), 12),
+            ('RIGHTPADDING', (0, 0), (0, 0), 12),
+            ('TOPPADDING', (0, 0), (0, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (0, 0), 10),
+            ('GRID', (0, 0), (0, 0), 0.5, notif['border_color']),
+        ]))
+        
+        elements.append(notif_table)
+        elements.append(Spacer(1, 10))
+    
+    return elements
+
+def generar_notificaciones_dinamicas(datos_clasificacion, datos_kmeans=None):
+    """Genera notificaciones dinámicas basadas en datos - SIN HTML VISIBLE"""
+    
+    notificaciones = []
+    
+    consumo_semana = datos_clasificacion['consumo_total_semana']
+    dias_alto = datos_clasificacion['dias_alto']
+    dias_medio = datos_clasificacion['dias_medio']
+    dias_bajo = datos_clasificacion['dias_bajo']
+    
+    # Notificación 1: Tendencia general
+    if consumo_semana < 50:
+        titulo = "✓ Excelente desempeño"
+        contenido = f"El consumo de esta semana ({consumo_semana:.1f} kWh) está en rango bajo. Tendencia positiva."
+        bg = colors.HexColor('#D1FAE5')
+        text = colors.HexColor('#065F46')
+        border = colors.HexColor('#10B981')
+    elif consumo_semana < 60:
+        titulo = "⚠ Consumo medio"
+        contenido = f"El consumo ({consumo_semana:.1f} kWh) es moderado. Considera optimizar equipos."
+        bg = colors.HexColor('#FEF3C7')
+        text = colors.HexColor('#92400E')
+        border = colors.HexColor('#F59E0B')
+    else:
+        titulo = "⚠ Consumo elevado"
+        contenido = f"El consumo ({consumo_semana:.1f} kWh) es alto. Revisar equipamiento."
+        bg = colors.HexColor('#FEE2E2')
+        text = colors.HexColor('#7F1D1D')
+        border = colors.HexColor('#EF4444')
+    
+    notificaciones.append({
+        'titulo': titulo,
+        'contenido': contenido,
+        'bg_color': bg,
+        'text_color': text,
+        'border_color': border
+    })
+    
+    # Notificación 2: Análisis de días
+    if dias_alto > 0:
+        notificaciones.append({
+            'titulo': '⚠ Días con consumo elevado',
+            'contenido': f"Se detectaron {dias_alto} día(s) con alto consumo (≥20 kWh). Revisar actividades.",
+            'bg_color': colors.HexColor('#FEE2E2'),
+            'text_color': colors.HexColor('#7F1D1D'),
+            'border_color': colors.HexColor('#EF4444')
+        })
+    else:
+        notificaciones.append({
+            'titulo': '✓ Días equilibrados',
+            'contenido': f"Todos los días mantienen consumo bajo-medio. Continuar con prácticas actuales.",
+            'bg_color': colors.HexColor('#D1FAE5'),
+            'text_color': colors.HexColor('#065F46'),
+            'border_color': colors.HexColor('#10B981')
+        })
+    
+    # Notificación 3: K-means si disponible
+    if datos_kmeans and len(datos_kmeans) >= 2:
+        semana_actual = datos_kmeans[0]['consumo']
+        semana_anterior = datos_kmeans[1]['consumo']
+        diferencia = semana_anterior - semana_actual
+        porcentaje = (diferencia / semana_anterior * 100) if semana_anterior > 0 else 0
+        
+        if diferencia > 0:
+            notificaciones.append({
+                'titulo': '📈 Mejora detectada',
+                'contenido': f"Consumo redujo {porcentaje:.1f}% respecto a semana anterior. Excelente.",
+                'bg_color': colors.HexColor('#D1FAE5'),
+                'text_color': colors.HexColor('#065F46'),
+                'border_color': colors.HexColor('#10B981')
+            })
+        elif diferencia < -5:
+            notificaciones.append({
+                'titulo': '📉 Aumento detectado',
+                'contenido': f"Consumo aumentó {abs(porcentaje):.1f}%. Considerar medidas de optimización.",
+                'bg_color': colors.HexColor('#FEE2E2'),
+                'text_color': colors.HexColor('#7F1D1D'),
+                'border_color': colors.HexColor('#EF4444')
+            })
+    
+    return notificaciones
+
+def agregar_pie_pagina_mejorado(canvas_obj, doc):
+    """
+    Agrega pie de página mejorado a cada página:
+    - ULEAM grande (120) arriba a la derecha
+    - Texto de información abajo centrado
+    - SIN línea separadora
+    - SIN superposición
+    """
+    
+    canvas_obj.saveState()
+    
+    # Dimensiones de la página
+    page_width, page_height = letter
+    
+    # Rectángulo blanco de fondo para pie de página
+    canvas_obj.setFillColor(colors.HexColor('#ffffff'))
+    canvas_obj.rect(0, 0, page_width, 120, fill=1, stroke=0)
+    
+    # ===== ULEAM GRANDE (120) ARRIBA A LA DERECHA =====
+    canvas_obj.setFont('OpenSansBold', 120)
+    canvas_obj.setFillColor(colors.HexColor('#E8A0A0'))
+    canvas_obj.drawRightString(page_width - 40, 50, "ULEAM")
+    
+    # ===== TEXTO DE INFORMACIÓN ABAJO IZQUIERDA =====
+    canvas_obj.setFont('Helvetica', 8)
+    canvas_obj.setFillColor(colors.HexColor('#666666'))
+
+    # ===== PIE DE PAGINA =====
+    pie_texto_1 = "Sistema de control automatizado - ULEAM El Carmen"
+    pie_texto_2 = f"Documento generado automáticamente el {datetime.now().strftime('%d/%m/%Y a las %H:%M')}"
+    canvas_obj.drawString(72, 35, pie_texto_1)
+    canvas_obj.drawString(72, 20, pie_texto_2)
+    
+
+    canvas_obj.restoreState()
+
+# ============================================
+# ENDPOINT: GENERAR PDF DE REPORTE
+# ============================================
+@app.route('/api/reportes/generar', methods=['POST'])
+@token_required
+def generar_reporte(current_user_id):
+    """Genera un nuevo reporte semanal de consumo"""
+    print("\n[GENERAR REPORTE]")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Verificar que es coordinador
+        cursor.execute(
+            "SELECT rol FROM usuarios WHERE id_usuario = %s",
+            (current_user_id,)
+        )
+        usuario = cursor.fetchone()
+        
+        if usuario['rol'] != 'coordinador':
+            cursor.close()
+            conn.close()
+            return jsonify({'message': 'No autorizado'}), 403
+        
+        # Calcular fechas de la semana (Lunes-Domingo)
+        hoy = datetime.now().date()
+        dias_desde_lunes = hoy.weekday()  # 0=Lunes, 6=Domingo
+        
+        # Lunes de esta semana
+        lunes_actual = hoy - timedelta(days=dias_desde_lunes)
+        
+        # Domingo de esta semana
+        domingo_actual = lunes_actual + timedelta(days=6)
+        
+        # Si hoy es después del domingo, usar semana anterior
+        if hoy > domingo_actual:
+            lunes_actual = lunes_actual - timedelta(days=7)
+            domingo_actual = domingo_actual - timedelta(days=7)
+        
+        # Convertir a string UNA SOLA VEZ
+        fecha_inicio_str = lunes_actual.strftime('%Y-%m-%d')
+        fecha_fin_str = domingo_actual.strftime('%Y-%m-%d')
+        
+        print(f"Período de reporte: {fecha_inicio_str} al {fecha_fin_str}")
+        
+        # Obtener período actual (OPCIONAL - puede estar vacío)
+        cursor.execute(
+            "SELECT periodo FROM jornadas WHERE activo = 1 LIMIT 1"
+        )
+        periodo_actual = cursor.fetchone()
+        
+        if periodo_actual:
+            periodo = periodo_actual['periodo']
+        else:
+            # Si no hay período activo, usar año actual con -0
+            ano_actual = datetime.now().year
+            periodo = f"{ano_actual}-0"
+        
+        # Calcular consumo total en el rango de fechas
+        cursor.execute(
+            """SELECT 
+                SUM(consumo_kW) as total_consumo,
+                SUM(encendido_segundos) as total_segundos
+            FROM consumo
+            WHERE DATE(dato_encendido) >= %s 
+            AND DATE(dato_encendido) <= %s""",
+            (fecha_inicio_str, fecha_fin_str)
+        )
+        resultado = cursor.fetchone()
+        
+        total_consumo = float(resultado['total_consumo'] or 0)
+        total_segundos = int(resultado['total_segundos'] or 0)
+        total_horas = round(total_segundos / 3600, 2)
+        
+        # Calcular promedio diario
+        dias_totales = (domingo_actual - lunes_actual).days + 1
+        promedio_diario = round(total_consumo / dias_totales, 2) if dias_totales > 0 else 0
+        
+        # Generar descripción
+        descripcion = f"Semana del {lunes_actual.strftime('%d/%m')} al {domingo_actual.strftime('%d/%m/%Y')} - Periodo {periodo}"
+        
+        # Verificar si ya existe un reporte para estas fechas
+        cursor.execute(
+            """SELECT id_reporte FROM reportes_consumo 
+            WHERE fecha_inicio = %s AND fecha_fin = %s""",
+            (fecha_inicio_str, fecha_fin_str)
+        )
+        existente = cursor.fetchone()
+        
+        if existente:
+            cursor.close()
+            conn.close()
+            return jsonify({'message': 'Ya existe un reporte para este período'}), 409
+        
+        # Guardar reporte
+        cursor.execute(
+            """INSERT INTO reportes_consumo 
+            (fecha_inicio, fecha_fin, periodo, total_consumo_kWh, total_horas_uso, 
+             promedio_diario_kWh, descripcion, generado_por)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+            (fecha_inicio_str, fecha_fin_str, periodo, total_consumo, total_horas, 
+             promedio_diario, descripcion, current_user_id)
+        )
+        
+        id_reporte = cursor.lastrowid
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        print(f"Reporte generado con ID: {id_reporte}")
+        
+        return jsonify({
+            'message': 'Reporte generado exitosamente',
+            'id_reporte': id_reporte,
+            'descripcion': descripcion,
+            'total_consumo': total_consumo,
+            'total_horas': total_horas,
+            'promedio_diario': promedio_diario
+        }), 200
+        
+    except Exception as e:
+        print(f"ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'message': f'Error: {str(e)}'}), 500
+
 # ============================================
 # ENDPOINT: DESCARGAR PDF DE REPORTE
 # ============================================
@@ -4351,20 +5160,27 @@ def descargar_pdf_reporte(current_user_id, id_reporte):
         )
         reporte = cursor.fetchone()
         
+        if not reporte:
+            cursor.close()
+            conn.close()
+            return jsonify({'message': 'Reporte no encontrado'}), 404
+        
+        # Formatear fecha_generacion si es datetime
+        if hasattr(reporte['fecha_generacion'], 'strftime'):
+            reporte['fecha_generacion'] = reporte['fecha_generacion'].strftime('%d/%m/%Y %H:%M')
+        
+        # Generar PDF (PASAR CONEXIÓN)
+        pdf_buffer = generar_pdf_reporte(reporte, conn)
+        
         cursor.close()
         conn.close()
         
-        if not reporte:
-            return jsonify({'message': 'Reporte no encontrado'}), 404
-        
-        # Formatear fechas
-        reporte['fecha_generacion'] = reporte['fecha_generacion'].strftime('%d/%m/%Y %H:%M')
-        
-        # Generar PDF
-        pdf_buffer = generar_pdf_reporte(reporte)
-        
         # Nombre del archivo
-        filename = f"Reporte_Semana_{reporte['fecha_inicio']}_{reporte['fecha_fin']}.pdf"
+        hoy = datetime.now()
+        dia = hoy.day
+        mes = hoy.month
+        ano = hoy.year
+        filename = f'Reporte_Consumo_{ano}_{mes:02d}_{dia:02d}.pdf'
         
         print(f"PDF generado: {filename}")
         
@@ -4541,7 +5357,7 @@ def mineria_clustering(current_user_id):
                 ) / 3600.0 as horas_uso
             FROM consumo
             WHERE 
-                dato_encendido >= DATE_SUB(CURDATE(), INTERVAL 12 WEEK)
+                dato_encendido >= DATE_SUB(CURDATE(), INTERVAL 4 WEEK)
             GROUP BY YEARWEEK(dato_encendido, 1)
             HAVING consumo_kWh > 0
             ORDER BY semana_id DESC
