@@ -300,7 +300,7 @@ def generar_pdf_reporte(reporte_data):
     
     tabla_periodo = Table(info_periodo, colWidths=[2*inch, 4*inch])
     tabla_periodo.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e3f2fd')),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#F3F4F6'))
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
         ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
         ('ALIGN', (1, 0), (1, -1), 'LEFT'),
@@ -328,7 +328,7 @@ def generar_pdf_reporte(reporte_data):
     
     tabla_resumen = Table(datos_resumen, colWidths=[3*inch, 3*inch])
     tabla_resumen.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#F3F4F6')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
@@ -4529,7 +4529,7 @@ def obtener_datos_kmeans(cursor):
     return kmeans_data
 
 def generar_grafica_clasificacion(datos_clasificacion):
-    """Genera gráfica de barras mejorada para clasificación"""
+    """Genera gráfica de barras moderna y sofisticada"""
     drawing = Drawing(500, 190)
     drawing.hAlign = 'CENTER'
     chart = VerticalBarChart()
@@ -4541,9 +4541,9 @@ def generar_grafica_clasificacion(datos_clasificacion):
     dias = datos_clasificacion['dias']
     valores = []
     colores_map = {
-        'green': colors.HexColor('#10B981'),    # Verde más profesional
-        'orange': colors.HexColor('#F59E0B'),   # Naranja profesional
-        'red': colors.HexColor('#EF4444')       # Rojo profesional
+        'green': colors.HexColor('#10B981'),
+        'orange': colors.HexColor('#F59E0B'),
+        'red': colors.HexColor('#EF4444')
     }
     
     colores_barras = []
@@ -4557,28 +4557,29 @@ def generar_grafica_clasificacion(datos_clasificacion):
             valores.append(0)
             colores_barras.append(colors.HexColor('#E5E7EB'))
     
-    # Configurar datos
+    # Datos
     chart.data = [valores]
     chart.categoryAxis.categoryNames = dias
     chart.categoryAxis.labels.fontSize = 9
     chart.categoryAxis.labels.fontName = 'Helvetica'
-    chart.categoryAxis.labels.angle = 0
+    chart.categoryAxis.strokeColor = colors.HexColor('#D1D5DB')
+    chart.categoryAxis.strokeWidth = 1
     
-    # Eje Y mejorado
+    # Eje Y moderno
     chart.valueAxis.valueMin = 0
     max_valor = max(valores) if max(valores) > 0 else 10
     chart.valueAxis.valueMax = max_valor * 1.2
     chart.valueAxis.labels.fontSize = 8
-    chart.valueAxis.labels.fontName = 'Helvetica'
+    chart.valueAxis.strokeColor = colors.HexColor('#D1D5DB')
+    chart.valueAxis.strokeWidth = 1
     
-    # Estilo de barras
-    chart.bars.strokeColor = colors.HexColor('#D1D5DB')
-    chart.bars.strokeWidth = 0.5
+    # Barras limpias
+    chart.bars.strokeColor = None
     chart.barWidth = 0.5
     
-    # Borde y fondo mejorado
-    chart.strokeColor = colors.HexColor('#9CA3AF')
-    chart.strokeWidth = 1.5
+    # Borde exterior sutil
+    chart.strokeColor = colors.HexColor('#D1D5DB')
+    chart.strokeWidth = 0.5
     
     drawing.add(chart)
     return drawing
@@ -4622,7 +4623,7 @@ def crear_hoja_1(reporte_data, fecha_inicio, fecha_fin, title_style, subtitle_st
     
     tabla_periodo = Table(info_periodo, colWidths=[2*inch, 4*inch])
     tabla_periodo.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e3f2fd')),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#F3F4F6')),
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
         ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
         ('ALIGN', (1, 0), (1, -1), 'LEFT'),
@@ -4652,7 +4653,7 @@ def crear_hoja_1(reporte_data, fecha_inicio, fecha_fin, title_style, subtitle_st
     
     tabla_resumen = Table(datos_resumen, colWidths=[3*inch, 3*inch])
     tabla_resumen.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#374151')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
@@ -4826,7 +4827,7 @@ def crear_hoja_2_semana4(datos_clasificacion, datos_kmeans, section_style):
     
     tabla_kmeans_report = Table(tabla_kmeans, colWidths=[2*inch, 2*inch, 2*inch])
     tabla_kmeans_report.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#374151')), 
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
